@@ -1,0 +1,12 @@
+ultralytics
+numpy
+scipy
+opencv-python
+torch
+torchvision
+Pillow
+yt-dlp
+transformers
+accelerate
+smplx
+trimesh

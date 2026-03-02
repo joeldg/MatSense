@@ -1,0 +1,14 @@
+{
+    "source_video": "long_gym_match.mp4",
+    "total_engagements": 1,
+    "highlights": [
+        {
+            "filename": "Analyzed_Event_1_RealSpeed.mp4",
+            "slow_mo_filename": "Analyzed_Event_1_SlowMo.mp4",
+            "phases_detected": [
+                "STANDING (TACHI-WAZA)"
+            ],
+            "match_timestamp_sec": 0.0
+        }
+    ]
+}

@@ -1,0 +1,10 @@
+{
+    "match_duration": 7.0,
+    "timeline": [
+        {
+            "time_sec": 7.0,
+            "event": "END OF CLIP",
+            "duration_of_previous_state": 0
+        }
+    ]
+}
