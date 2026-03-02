@@ -1,0 +1,67 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Mac OS specific
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Virtual Environments
+venv/
+env/
+.env
+.venv
+env.bak/
+venv.bak/
+
+# Video Processing & Output files
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
+
+# Temporary Download cache
+tmp_downloads/
+tmp/
+temp/
+
+# Ultralytics & Model Weights
+runs/
+*.pt
+*.pth
+*.npz
+*.onnx
+
+# Datasets and annotations
+*.json
+!master_match_report.json
+!match_report.json
+*.xml
+*.csv
+
+# YOLO / ViCoS generated labels
+*.txt
+!requirements.txt
+
+# Images and zips
+*.jpg
+*.jpeg
+*.png
+*.zip
+*.tar
+*.gz
+
+# WHAM/SMPLX specific
+models/
