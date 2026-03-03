@@ -109,22 +109,32 @@ Because WHAM requires proprietary PyTorch geometry parameters that cannot be hos
 5. Rename the file to `SMPL_NEUTRAL.pkl` and place it in the project at `models/smpl/SMPL_NEUTRAL.pkl`.
 
 ### 4. End-to-End Cognitive Training Flow
-This is the complete pipeline to build a 2D Action Recognition dataset and fine-tune the Hugging Face model locally:
+This is the complete pipeline to build an Action Recognition dataset and fine-tune our models on Apple Silicon:
 
 1. **Harvest Kinematic Tensors:** 
-   Run the analysis pipeline. It will automatically stabilize the camera, crop the athletes, and dump exactly `224x224` mp4 tensors into `dataset/raw_clips`.
+   Point the batch harvester at a directory full of your Grappling/Judo `.mp4` matches. It will automatically stabilize the camera, crop the athletes during takedowns, and dump exactly `224x224` tensors into `dataset/raw_clips`.
    ```bash
-   python3 main.py analyze -i /path/to/match.mp4
+   python3 tools/batch_harvester.py -d /path/to/my_matches/ --mode analyze
    ```
 2. **Auto-Label the Dataset (Zero-Shot VLM):** 
-   Pass the raw tensor clips to Gemini via the Gemini API. The script will classify the technique (e.g. `double_leg`) and move the video into the correct `dataset/train/` subfolder. *(Requires `GEMINI_API_KEY` exported in environment).*
+   Pass the raw tensor clips to Gemini via the Gemini API. The script will classify the technique (e.g., `uchi_mata`, `triangle_choke`) and physically sort the clips into their respective `dataset/train/{technique}/` subfolders. *(Requires `GEMINI_API_KEY` exported in environment).*
    ```bash
    python3 tools/auto_labeler.py
    ```
-3. **Fine-Tune VideoMAE:** 
+3. **Fine-Tune 2D VideoMAE:** 
    Point the Hugging Face Trainer at the labeled dataset. It will automatically divide Train/Eval splits, swap in a new classification head, and execute on MPS/CUDA GPUs.
    ```bash
    python3 main.py train-cognitive -d dataset/train -e 10
+   ```
+4. **Pre-Compute WHAM 3D Tensors:**
+   Running the live Volumetric Lifter during 3D model training is painfully slow. Convert your labeled `.mp4` takedown clips directly to `.pt` offline `(T, J, 3)` PyTorch tensors before training.
+   ```bash
+   python3 tools/bulk_extract_wham_tensors.py -d dataset/train -o dataset/3d_tensors
+   ```
+5. **Train 3D Volumetric Classifier (LSTM):**
+   Train the final native PyTorch Volumetric LSTM network directly on the pre-computed 3D datasets, stripping away 2D color/clothing variables completely.
+   ```bash
+   python3 main.py train-3d -d dataset/3d_tensors -e 25
    ```
 
 ### 5. Training Utilities
