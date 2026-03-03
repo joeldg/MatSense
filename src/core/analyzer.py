@@ -99,7 +99,7 @@ class MatchAnalyzer:
                 "transition_frame": trans_f,
                 "impact_frame": impact_f,
                 "start_frame": max(0, int(trans_f - (8.0 * self.fps))), 
-                "end_frame": min(total_frames - 1, int(impact_f + (6.0 * self.fps))),
+                "end_frame": min(total_frames - 1, int(impact_f + (9.0 * self.fps))),
                 "severity": best_event['severity']
             }]
                 
@@ -109,6 +109,6 @@ class MatchAnalyzer:
             "transition_frame": lowest_f,
             "impact_frame": lowest_f, 
             "start_frame": max(0, int(lowest_f - (8.0 * self.fps))), 
-            "end_frame": min(total_frames - 1, int(lowest_f + (6.0 * self.fps))),
+            "end_frame": min(total_frames - 1, int(lowest_f + (9.0 * self.fps))),
             "severity": 0
         }]

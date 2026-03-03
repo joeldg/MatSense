@@ -7,7 +7,7 @@ class LightweightTrajectoryClassifier(nn.Module):
     A fast 1D-CNN or Transformer that ingests a tensor of (Time, Joints, 3D Coordinates).
     Because it only looks at 3D geometry, it is immune to camera angle or lighting changes.
     """
-    def __init__(self, num_joints=24, num_classes=10):
+    def __init__(self, num_joints=23, num_classes=10):
         super().__init__()
         # Input shape per frame: num_joints * 3
         input_dim = num_joints * 3
@@ -47,7 +47,7 @@ class VolumetricTechniqueClassifier:
     """
     Classifier that orchestrates the lightweight trajectory network.
     """
-    def __init__(self, num_joints=24):
+    def __init__(self, num_joints=23):
         print(f"🧠 Initializing 3D Volumetric Classifier on {DEVICE.upper()}...")
         self.device = DEVICE
         self.model = LightweightTrajectoryClassifier(num_joints=num_joints).to(self.device)

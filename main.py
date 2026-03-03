@@ -37,7 +37,12 @@ def main():
     train_parser = subparsers.add_parser("train", help="Train the model using Apple MPS / CUDA.")
     train_parser.add_argument("--resume", action="store_true", help="Resume from the last checkpoint.")
 
-    # 4. Prep Command
+    # 6. Train Cognitive Command
+    train_cog_parser = subparsers.add_parser("train-cognitive", help="Fine-tune the VideoMAE Cognitive Engine.")
+    train_cog_parser.add_argument("-d", "--dataset", default="dataset/train", help="Directory containing the training classes.")
+    train_cog_parser.add_argument("-e", "--epochs", type=int, default=10, help="Number of training epochs.")
+
+    # 7. Prep Command
     prep_parser = subparsers.add_parser("prep", help="Convert ViCoS annotations into YOLO text files.")
     prep_parser.add_argument("-d", "--data", default="annotations.json", help="Path to annotations.json")
 
@@ -99,7 +104,7 @@ def main():
                 num_joints = 55
             else:
                 lifter = WHAMCognitiveEngine()
-                num_joints = 24
+                num_joints = 23
                 
             mesh_sequence = lifter.extract_3d_mesh(video_path)
             
@@ -118,6 +123,13 @@ def main():
         else:
             print("🔥 Starting new training session...")
             forge_on_apple_silicon()
+
+    elif args.command == "train-cognitive":
+        from src.core.cognitive_engine import GrapplingCognitiveEngine
+        try:
+            GrapplingCognitiveEngine.train_model(dataset_dir=args.dataset, epochs=args.epochs)
+        except Exception as e:
+            print(f"❌ Error during cognitive engine fine-tuning: {e}")
 
     elif args.command == "prep":
         if os.path.exists(args.data):

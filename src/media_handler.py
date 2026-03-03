@@ -1,5 +1,6 @@
 import os
-import yt_dlp
+from pytubefix import YouTube
+from pytubefix.cli import on_progress
 import uuid
 import requests
 from urllib.parse import urlparse
@@ -28,23 +29,33 @@ class VideoFetcher:
 
     def download_youtube(self, url: str) -> str:
         unique_id = str(uuid.uuid4())[:8]
-        output_template = os.path.join(self.temp_dir, f"yt_{unique_id}.%(ext)s")
-        
-        ydl_opts = {
-            'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
-            'outtmpl': output_template,
-            'quiet': False,
-            'no_warnings': True,
-        }
         
         print(f"📥 Downloading YouTube video from {url}...")
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(url, download=True)
-            video_title = info_dict.get('title', None)
-            video_ext = info_dict.get('ext', 'mp4')
-            final_path = os.path.join(self.temp_dir, f"yt_{unique_id}.{video_ext}")
+        try:
+            # Use WEB client to bypass the po_token manual prompt
+            yt = YouTube(url, client='WEB', on_progress_callback=on_progress)
+            
+            # Auto-fetch title
+            video_title = yt.title
+            
+            # Get highest resolution mp4 stream
+            stream = yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution').desc().first()
+            if not stream:
+                stream = yt.streams.filter(file_extension='mp4').first()
+                
+            if not stream:
+                raise ValueError("No suitable MP4 stream found for this video.")
+            
+            final_filename = f"yt_{unique_id}.mp4"
+            final_path = os.path.join(self.temp_dir, final_filename)
+            
+            stream.download(output_path=self.temp_dir, filename=final_filename)
+            
             print(f"✅ Downloaded: {video_title} to {final_path}")
             return final_path
+            
+        except Exception as e:
+            raise RuntimeError(f"PyTubeFix Error 403 Bypass Failed: {e}")
 
     def download_direct_url(self, url: str) -> str:
         unique_id = str(uuid.uuid4())[:8]

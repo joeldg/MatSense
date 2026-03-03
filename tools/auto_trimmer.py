@@ -15,7 +15,11 @@ def find_all_takedowns(video_path):
 
     fps = cap.get(cv2.CAP_PROP_FPS)
     if fps == 0 or np.isnan(fps): fps = 30.0
-    frame_skip = max(1, int(fps / 5)) 
+    
+    # Dynamic Skip Architecture
+    base_skip = max(1, int(fps / 5))      # ~0.2s check when action is hot
+    empty_skip = max(1, int(fps * 2.5))   # ~2.5s jump when the mat is dead
+    current_skip = empty_skip
     
     w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     center_x = w / 2.0
@@ -23,17 +27,20 @@ def find_all_takedowns(video_path):
     posture_history = []
     frame_indices = []
     
-    print(f"⏩ Analyzing Hip-to-Ankle ratios at 5 FPS...")
+    print(f"⏩ Analyzing Match Dynamics (Dynamic Frame Skip Enabled)...")
     frame_idx = 0
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret: break
             
-        if frame_idx % frame_skip == 0:
+        if frame_idx % current_skip == 0:
             # Force CPU so it doesn't interrupt your M4 overnight training!
             results = model.predict(frame, classes=[0], device='cpu', verbose=False) 
             
             if results[0].keypoints is not None and len(results[0].keypoints.data) >= 2:
+                # Mat is active - Reset to fine-grained inspection
+                current_skip = base_skip
+                
                 kpts = results[0].keypoints.data.cpu().numpy()
                 boxes = results[0].boxes.xyxy.cpu().numpy()
                 
@@ -93,10 +100,13 @@ def find_all_takedowns(video_path):
                         normalized_spread = min_spread / (avg_height + 1e-5)
                         posture_history.append(normalized_spread)
                         frame_indices.append(frame_idx)
+            else:
+                # Nobody on the mat - Engage fast forward protocol
+                current_skip = empty_skip
                 
         frame_idx += 1
-        if frame_idx % int(fps * 10) == 0:
-            print(f"   ...Scanned {int(frame_idx/fps)} seconds")
+        if frame_idx % int(fps * 60) == 0:
+            print(f"   ...Scanned {int((frame_idx/fps)/60)} minutes")
 
     cap.release()
     
@@ -139,13 +149,27 @@ def trim_all_highlights(video_path, impact_frames, fps, pre_buffer=4.0, post_buf
     w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     
-    print(f"\n🎬 Auto-Generating {len(impact_frames)} Highlight Reels...")
+    # Extract Base Filename safely
+    base_name = os.path.splitext(os.path.basename(video_path))[0]
+    
+    print(f"\n🎬 Auto-Generating {len(impact_frames)} Highlight Reels from {base_name}...")
     
     for clip_num, impact_frame in enumerate(impact_frames, 1):
         start_frame = max(0, int(impact_frame - (pre_buffer * fps)))
         end_frame = int(impact_frame + (post_buffer * fps))
         
-        out_path = f'highlight_{clip_num}.mp4'
+        # Calculate Human Readable Timestamp
+        total_seconds = int(impact_frame / fps)
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        seconds = total_seconds % 60
+        
+        if hours > 0:
+            timestamp_str = f"{hours}h_{minutes:02d}m_{seconds:02d}s"
+        else:
+            timestamp_str = f"{minutes:02d}m_{seconds:02d}s"
+            
+        out_path = f'{base_name}_takedown_at_{timestamp_str}.mp4'
         out = cv2.VideoWriter(out_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
         
         print(f"✂️  Extracting Match Event {clip_num}: {start_frame/fps:.1f}s to {end_frame/fps:.1f}s...")

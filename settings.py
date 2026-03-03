@@ -18,7 +18,7 @@ DEFAULT_VIDEOMAE_MODEL = "MCG-NJU/videomae-base-finetuned-kinetics"
 VIDEOMAE_NUM_FRAMES = 16
 
 # 3D Cognitive Engine Settings
-DEFAULT_WHAM_MODEL = "models/wham_vit_l.pth"
+DEFAULT_WHAM_MODEL = "third_party/wham/checkpoints/wham_vit_w_3dpw.pth.tar"
 DEFAULT_SMPLX_MODEL = "models/smplx/SMPLX_NEUTRAL.npz"
 USE_3D_ENGINE = True
 

@@ -41,6 +41,8 @@ temp/
 runs/
 *.pt
 *.pth
+*.pth.tar
+*.ckpt
 *.npz
 *.onnx
 
@@ -65,3 +67,4 @@ runs/
 
 # WHAM/SMPLX specific
 models/
+*.pkl

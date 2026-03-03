@@ -97,7 +97,37 @@ python3 main.py classify -i takedown_clip.mp4
 python3 main.py classify-3d -i takedown_clip.mp4 --engine wham
 ```
 
-### 4. Training Utilities
+#### Installing the WHAM 3D Engine
+Because WHAM requires proprietary PyTorch geometry parameters that cannot be hosted publicly, you must initialize the 3D engine manually:
+1. Run the auto-installer to clone the WHAM subsystem and download the `.pth` model weights:
+   ```bash
+   bash tools/install_wham.sh
+   ```
+2. Register an account at [https://smplify.is.tue.mpg.de](https://smplify.is.tue.mpg.de).
+3. Download the `mpips_smplify_public_v2.zip` archive from their downloads section.
+4. Extract `basicModel_neutral_lbs_10_207_0_v1.0.0.pkl` from `smplify_public/code/models/`.
+5. Rename the file to `SMPL_NEUTRAL.pkl` and place it in the project at `models/smpl/SMPL_NEUTRAL.pkl`.
+
+### 4. End-to-End Cognitive Training Flow
+This is the complete pipeline to build a 2D Action Recognition dataset and fine-tune the Hugging Face model locally:
+
+1. **Harvest Kinematic Tensors:** 
+   Run the analysis pipeline. It will automatically stabilize the camera, crop the athletes, and dump exactly `224x224` mp4 tensors into `dataset/raw_clips`.
+   ```bash
+   python3 main.py analyze -i /path/to/match.mp4
+   ```
+2. **Auto-Label the Dataset (Zero-Shot VLM):** 
+   Pass the raw tensor clips to Gemini via the Gemini API. The script will classify the technique (e.g. `double_leg`) and move the video into the correct `dataset/train/` subfolder. *(Requires `GEMINI_API_KEY` exported in environment).*
+   ```bash
+   python3 tools/auto_labeler.py
+   ```
+3. **Fine-Tune VideoMAE:** 
+   Point the Hugging Face Trainer at the labeled dataset. It will automatically divide Train/Eval splits, swap in a new classification head, and execute on MPS/CUDA GPUs.
+   ```bash
+   python3 main.py train-cognitive -d dataset/train -e 10
+   ```
+
+### 5. Training Utilities
 Prepare custom datasets and fine-tune models on Apple Silicon.
 ```bash
 # Convert dataset annotations
@@ -111,7 +141,7 @@ python3 main.py train --resume
 ---
 
 ## 🔮 Roadmap / Next Steps
-- Implement the "Data Harvester" auto-cropper module.
-- Plumb the Data Harvester outputs automatically into zero-shot VLM APIs (Gemini 1.5 Pro) for auto-labeling.
-- Fine-tune the `MCG-NJU/videomae-base` with the newly generated Grappling dataset.
-- Procure and integrate the full WHAM `.pth` weights to switch the 3D Cognitive Engine from simulated mock-mode to live production mode.
+- [x] Implement the "Data Harvester" auto-cropper module.
+- [x] Plumb the Data Harvester outputs automatically into zero-shot VLM APIs (Gemini 1.5 Pro) for auto-labeling.
+- [x] Fine-tune the `MCG-NJU/videomae-base` with the newly generated Grappling dataset.
+- [x] Procure and integrate the full WHAM `.pth` weights to switch the 3D Cognitive Engine from simulated mock-mode to live production mode.

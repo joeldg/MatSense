@@ -6,6 +6,7 @@ from settings import PROPRIETARY_MODEL
 from src.core.tracker import MatchTracker
 from src.core.analyzer import MatchAnalyzer
 from src.core.renderer import BroadcastRenderer
+from src.core.harvester import DataHarvester
 
 class GrapplingPipeline:
     def __init__(self, model_path=PROPRIETARY_MODEL):
@@ -39,13 +40,20 @@ class GrapplingPipeline:
         
         renderer = BroadcastRenderer(fps, w, h)
         
+        # Initialize the Data Harvester for Cognitive Engine tensors
+        harvester = DataHarvester(output_dir=os.path.join(output_dir, "dataset", "raw_clips"))
+        
         for i, event in enumerate(events, 1):
             print(f"\n   Rendering Match Event {i}/{len(events)}...")
             event_stats = renderer.render_event_clip(video_path, event, resolved_timeline, i, output_dir=output_dir)
             
+            # Extract 224x224 tensor
+            tensor_path = harvester.harvest_kinematic_tensor(video_path, event, resolved_timeline, fps, w, h, i)
+            
             master_report["highlights"].append({
                 "filename": event_stats["filename"],
                 "slow_mo_filename": event_stats["slow_mo_file"],
+                "tensor_filename": tensor_path,
                 "phases_detected": event_stats["phases"],
                 "match_timestamp_sec": round(float(event['start_frame'] / fps), 1)
             })

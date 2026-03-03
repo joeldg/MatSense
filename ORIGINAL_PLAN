@@ -1,0 +1,94 @@
+🥋 Grappling AI: Kinematic Tracker & Cognitive Engine
+📖 Project Overview
+This repository contains a state-of-the-art computer vision pipeline designed to autonomously track, analyze, and highlight grappling matches (Brazilian Jiu-Jitsu, Judo, Submission Grappling) from raw, single-angle smartphone footage.
+
+Grappling is widely considered the "Final Boss" of computer vision due to severe body occlusion (the "human pretzel" effect), tangled limbs, identical uniforms, complex camera panning, and chaotic gym backgrounds. To solve this, we have engineered a Kinematic State Engine (Currently at V42). It acts as an advanced mathematical attention mechanism that stabilizes the environment, isolates the true foreground athletes, maps their physics, completely ignores background interference, and generates broadcast-ready cinematic replays.
+
+We are currently transitioning from Phase 1 (Localization & Physics) to Phase 2 (Cognitive Action Recognition).
+
+✅ Phase 1: What We Have Built So Far (The V42 Engine)
+We have iteratively transformed a basic YOLOv8-Pose tracker into a robust, context-aware physics pipeline heavily optimized for Apple Silicon (M4 Max / MPS).
+
+Core Architectural Breakthroughs:
+
+Absolute Frame Synchronization: Circumvented the "Variable Frame Rate (VFR) Desync Trap" inherent in smartphone footage. By replacing asynchronous stream generators with strict OpenCV frame-by-frame locking, the 3D skeletal wireframes now mathematically stick to the fighters' bodies perfectly, even during fast camera pans.
+
+Foreground Supremacy Matrix (Subject Isolation): Gyms are chaotic. The AI uses an exponential depth-scaling matrix (depth³ * size²) paired with median-average scoring over time to mathematically prioritize large foreground athletes. It completely ignores kids wrestling in the background, regardless of how long they stay on screen.
+
+Centerline Orbit Matrix (Sentinel Ref Classifier): Standard AI assumes the tallest person is the ref. Our system uses an Opening Bell Heuristic. It maps the first 8 seconds of the match, draws an invisible geometric column between the two fighters, and crowns the adult who stands upright in that "between" zone—without physically grappling the kids—as the true Referee/Coach.
+
+Immutable Biometric DNA (Anti-Swap Lock): When fighters clinch or roll on the floor, standard tracking IDs swap as bounding boxes merge. We built an engine that finds a "Face-Off" frame (zero physical overlap) at the start of the match, extracts a pure upper-torso color histogram (DNA), and permanently locks it. If bodies overlap by >15% (IoU), it dynamically freezes its visual memory to prevent color-bleed and identity drift.
+
+Kinematic Transition Engine (Event Detection): Instead of just looking for horizontal bounding boxes (which falsely triggers during wide standing stances), the AI scans the entire match for the Deepest Pit (a sustained drop in head-altitude ending in a pin). It calculates a Severity Score (Drop Velocity), then traces time backward frame-by-frame to find the exact moment the fighters left their feet.
+
+Broadcast UI HUD: A fully rendered data-overlay that color-codes the entities, draws custom EMA-smoothed skeletons (with an anti-rubberband snap matrix), and automatically generates dynamically shifted 14-second Director's Cut cinematic slow-motion replays centered perfectly on the impact.
+
+🚀 Phase 2: The Game Plan (The Cognitive Engine)
+The current pipeline understands physics (e.g., "a rapid 300px drop in head altitude = a takedown"). The next evolution is introducing Spatio-Temporal AI so the system understands techniques (e.g., classifying the drop as an Osoto Gari or a Double Leg).
+
+We are shifting from a monolithic script to a modular architecture to build true Deep Action Recognition.
+
+Step 1: Architecture Modularization
+Split the massive 5_master_pipeline.py script into a clean, scalable Python package structure.
+
+Step 2: Build the "Data Harvester" Module
+Standard action recognition models fail in sports because of background noise. Because our V42 pipeline already perfectly isolates the fighters, we will modify it to act as a headless dataset generator. When the Kinematic Engine detects a throw, the Harvester will:
+
+Dynamically crop a tight bounding box around only the two locked fighters.
+
+Export a clean 4-second video tensor.
+
+Strip out the gym background, spectators, and referee so the AI purely sees the physics of the movement.
+
+Step 3: Zero-Shot VLM Auto-Labeling
+To avoid manually labeling hundreds of clips, we will pass the Harvester's cropped video tensors through a multimodal Vision-Language Model API (like Gemini 1.5 Pro Video or GPT-4o) with a strict prompt:
+
+"You are an expert BJJ Black Belt. Watch this 4-second isolated clip. What specific technique is the top player performing? Return JSON."
+This will automatically generate our ground-truth training dataset labels.
+
+Step 4: Train the Edge-Compute Cognitive Engine
+Using the auto-labeled dataset, we will fine-tune a Hugging Face VideoMAE (Masked Autoencoder for Video). Unlike outdated 3D-CNNs (like MMAction2) that require massive datasets, this Spatio-Temporal model is explicitly trained to infer missing data, making it incredibly resilient to the heavy occlusion (hidden limbs) found in grappling.
+
+Step 5: Broadcast Unification
+Plug the new Cognitive Module back into the main pipeline. The final architecture will:
+
+Map: Find the fighters and lock their DNA.
+
+Detect: Isolate the kinematic transition.
+
+Harvest: Crop the preceding 4 seconds into a spatial tensor.
+
+Analyze: Pass the tensor to the Cognitive Engine to classify the move.
+
+Render: Output the cinematic replay with [TECHNIQUE IDENTIFIED: OSOTO GARI (94%)] dynamically printed on the HUD.
+
+📁 Proposed Repository Structure
+When initializing the new workspace, we will build out the following file tree:
+
+Plaintext
+grappling-ai-pipeline/
+│
+├── core/
+│   ├── config.py             # Hardware checks, global thresholds, API keys
+│   ├── video_reader.py       # Frame-locked OpenCV ingestion
+│
+├── tracking/
+│   ├── yolo_census.py        # YOLO Pose + BoT-SORT inference
+│   ├── biometrics.py         # Histograms, IoU, Immutable DNA Lock
+│
+├── heuristics/
+│   ├── foreground_matrix.py  # Depth scaling, Primary athlete isolation
+│   ├── sentinel_matrix.py    # Centerline alignment, Ref/Coach logic
+│
+├── analytics/
+│   ├── kinematics.py         # Altitude tracking, Drop severity, Scipy matrix
+│   ├── auto_cropper.py       # [NEW] Generates tight tensors for the dataset
+│
+├── rendering/
+│   ├── hud_overlay.py        # Boxes, tags, Z-axis horizon
+│   ├── skeleton_ema.py       # Custom wireframes and anti-rubberband snap
+│   ├── video_writer.py       # Real-time and Slow-Mo compilation
+│
+├── dataset/                  # [NEW] Where the Harvester saves isolated clips
+├── main.py                   # The execution orchestrator
+└── requirements.txt

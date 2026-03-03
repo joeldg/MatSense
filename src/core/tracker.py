@@ -24,10 +24,16 @@ def get_color_hist(frame, box, w, h):
     if crop.size == 0: return None
     
     try:
+        # Calculate HSV Histogram
         hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
         hist = cv2.calcHist([hsv], [0, 1], None, [16, 16], [0, 180, 0, 256])
         cv2.normalize(hist, hist)
-        return hist
+        
+        # Calculate Black & White / Low Saturation Volume (Bins 0-3 on the Saturation Axis)
+        # This completely ignores Hue and just looks for gray/black/white clothing
+        bw_score = np.sum(hist[:, 0:3]) 
+        
+        return {'hist': hist, 'bw_score': bw_score}
     except: return None
 
 class MatchTracker:
@@ -65,8 +71,10 @@ class MatchTracker:
                 kpts = results[0].keypoints.data.cpu().numpy().copy() if results[0].keypoints is not None else [None]*len(boxes)
                 
                 for b, tid, k in zip(boxes, ids, kpts):
-                    hist = get_color_hist(frame, b, w, h)
-                    dets.append({'box': b, 'id': tid, 'kpt': k, 'hist': hist})
+                    color_data = get_color_hist(frame, b, w, h)
+                    hist = color_data['hist'] if color_data else None
+                    bw_score = color_data['bw_score'] if color_data else 0.0
+                    dets.append({'box': b, 'id': tid, 'kpt': k, 'hist': hist, 'bw_score': bw_score})
             raw_data[frame_idx] = dets
             
             frame_idx += 1
@@ -99,13 +107,23 @@ class MatchTracker:
                     overlap_x = max(0, min(b1[2], b2[2]) - max(b1[0], b2[0]))
                     overlap_y = max(0, min(b1[3], b2[3]) - max(b1[1], b2[1]))
                     
-                    fg_y = max(b1[3], b2[3]) / h
+                    # 1. DEPTH HEURISTIC: Use MIN depth instead of MAX so BOTH feet must be close to camera
+                    fg_y = min(b1[3], b2[3]) / h
+                    
+                    # 2. SIZE HEURISTIC: Prefer larger objects
                     size_h = max(h1, h2) / h
+                    
+                    # 3. CENTER HEURISTIC: Heavily prioritize pairs interacting near the center of the frame
                     center = 1.0 - (abs(((cx1+cx2)/2) - w/2) / (w/2))
                     
-                    score = (fg_y ** 3) * 50.0 + (size_h ** 2) * 50.0 + (center * 10.0)
+                    # 4. ASPECT RATIO PENALTY: Referees are usually tall/skinny (<0.5 aspect). Grapplers are wider.
+                    aspect1 = (b1[2]-b1[0]) / (h1 + 1e-5)
+                    aspect2 = (b2[2]-b2[0]) / (h2 + 1e-5)
+                    ref_penalty = -50.0 if (aspect1 < 0.6 or aspect2 < 0.6) else 0.0
+                    
+                    score = (fg_y ** 3) * 75.0 + (size_h ** 2) * 50.0 + (center * 25.0) + ref_penalty
                     if overlap_x * overlap_y > 0:
-                        score += 5.0
+                        score += 15.0
                     
                     pair_id = tuple(sorted([dets[i]['id'], dets[j]['id']]))
                     pair_stats[pair_id].append(score)
@@ -175,8 +193,8 @@ class MatchTracker:
         return best_anchor
 
     def build_global_blacklist(self, raw_data, anchor, w, h, fps):
-        print("🔍 [PHASE 2b] BEHAVIORAL PRE-SCAN: Executing Centerline Alignment Matrix...")
-        global_stats = defaultdict(lambda: {'boxes': [], 'between_frames': 0, 'interact_frames': 0})
+        print("🔍 [PHASE 2b] BEHAVIORAL PRE-SCAN: Executing Spatial & Spectral Referee Matrix...")
+        global_stats = defaultdict(lambda: {'boxes': [], 'between_frames': 0, 'interact_frames': 0, 'bw_scores': []})
 
         start_match_frames = anchor['f'] + int(fps * 8.0)
         early_frames_counted = 0
@@ -186,6 +204,8 @@ class MatchTracker:
             for d in dets:
                 tid = d['id']
                 global_stats[tid]['boxes'].append(d['box'])
+                if d.get('bw_score'): global_stats[tid]['bw_scores'].append(d['bw_score'])
+                
                 if tid == anchor['p1']['id']: p1_cand = d['box']
                 if tid == anchor['p2']['id']: p2_cand = d['box']
                 
@@ -236,22 +256,26 @@ class MatchTracker:
             standing_pct = np.mean(aspect_ratios < 0.85)
             between_ratio = stats['between_frames'] / float(max(1, early_frames_counted))
             interaction_rate = stats['interact_frames'] / float(max(1, len(boxes)))
+            avg_bw = np.median(stats['bw_scores']) if stats['bw_scores'] else 0.0
             
             if med_y < anchor_y - (anchor_h * 0.45):
                 bg_ids.add(tid); continue
                 
             is_upright = standing_pct > 0.60
-            is_non_interactive = interaction_rate < 0.25
+            is_non_interactive = interaction_rate < 0.35
             
-            if is_upright and is_non_interactive and stats['between_frames'] > 0:
-                ref_candidates.append({'id': tid, 'between_ratio': between_ratio})
+            # The Referee is usually standing, rarely interacts, and starts between the players
+            if is_upright and is_non_interactive:
+                ref_score = (between_ratio * 50.0) + (avg_bw * 50.0)
+                ref_candidates.append({'id': tid, 'score': ref_score, 'bw': avg_bw, 'ratio': between_ratio})
             else:
                 spec_ids.add(tid)
 
         if ref_candidates:
-            ref_candidates.sort(key=lambda x: x['between_ratio'], reverse=True)
+            # Rank strictly by the newly calculated ref_score
+            ref_candidates.sort(key=lambda x: x['score'], reverse=True)
             true_coach_id = ref_candidates[0]['id']
-            print(f"   👔 TRUE REF/COACH SECURED: ID {true_coach_id} (Between Ratio: {ref_candidates[0]['between_ratio']:.2f})")
+            print(f"   👔 TRUE REF/COACH SECURED: ID {true_coach_id} (Sat-Score: {ref_candidates[0]['bw']:.2f}, Between-Ratio: {ref_candidates[0]['ratio']:.2f})")
             for cand in ref_candidates[1:]: spec_ids.add(cand['id'])
                 
         return true_coach_id, spec_ids, bg_ids

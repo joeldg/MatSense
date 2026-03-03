@@ -10,3 +10,6 @@ transformers
 accelerate
 smplx
 trimesh
+datasets
+evaluate
+scikit-learn
