@@ -13,3 +13,4 @@ trimesh
 datasets
 evaluate
 scikit-learn
+pytest>=7.4.3
