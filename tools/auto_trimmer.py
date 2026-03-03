@@ -48,10 +48,9 @@ def find_all_takedowns(video_path):
                 scores = []
                 for i, b in enumerate(boxes):
                     cx = (b[0] + b[2]) / 2.0
-                    area = (b[2] - b[0]) * (b[3] - b[1])
                     dist_to_center = abs(cx - center_x)
-                    # Reward size, heavily penalize distance from center
-                    scores.append((i, area / (dist_to_center + 100)))
+                    # Heavily prioritize center-frame existence, ignore area size entirely for distant recordings
+                    scores.append((i, 1000.0 / (dist_to_center + 1.0)))
                 
                 scores.sort(key=lambda x: x[1], reverse=True)
                 main_idx = scores[0][0]

@@ -110,7 +110,7 @@ class MatchTracker:
                     # 1. DEPTH HEURISTIC: Use MIN depth instead of MAX so BOTH feet must be close to camera
                     fg_y = min(b1[3], b2[3]) / h
                     
-                    # 2. SIZE HEURISTIC: Prefer larger objects
+                    # 2. SIZE HEURISTIC: Prefer larger objects slightly, but prioritize centering
                     size_h = max(h1, h2) / h
                     
                     # 3. CENTER HEURISTIC: Heavily prioritize pairs interacting near the center of the frame
@@ -121,7 +121,7 @@ class MatchTracker:
                     aspect2 = (b2[2]-b2[0]) / (h2 + 1e-5)
                     ref_penalty = -50.0 if (aspect1 < 0.6 or aspect2 < 0.6) else 0.0
                     
-                    score = (fg_y ** 3) * 75.0 + (size_h ** 2) * 50.0 + (center * 25.0) + ref_penalty
+                    score = (fg_y ** 3) * 75.0 + (size_h ** 2) * 15.0 + (center * 75.0) + ref_penalty
                     if overlap_x * overlap_y > 0:
                         score += 15.0
                     
