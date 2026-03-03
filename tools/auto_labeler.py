@@ -8,11 +8,11 @@ import google.generativeai as genai
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
 PROMPT = """
-You are an elite Brazilian Jiu-Jitsu and Judo black belt.
-Watch this short tightly cropped video tensor of a grappling exchange.
+You are an elite Brazilian Jiu-Jitsu and Judo black belt judge.
+Watch this short, tightly cropped video tensor of a grappling exchange.
 Identify the primary technique or sequence being executed by the offensive player.
-Choose ONLY from the following categories:
-['double_leg', 'single_leg', 'osoto_gari', 'guard_pull', 'toreando_pass', 'scramble_unknown']
+Choose ONLY from the exact following categories:
+['double_leg', 'single_leg', 'osoto_gari', 'uchi_mata', 'seoi_nage', 'guard_pull', 'sprawl', 'triangle_choke', 'armbar', 'toreando_pass', 'scramble_unknown']
 
 Return ONLY a valid JSON object in this exact format:
 {"technique": "category_name", "confidence": 0.95, "reasoning": "brief explanation"}
@@ -35,10 +35,24 @@ def label_dataset(input_dir="dataset/raw_clips", output_dir="dataset/train"):
             video_file = genai.get_file(video_file.name)
             
         try:
+            # Respect rate limits for free-tier Gemini API
+            time.sleep(4)
+            
             response = model.generate_content([video_file, PROMPT])
-            clean_json = response.text.replace("```json", "").replace("```", "").strip()
+            
+            # Extract JSON from potential markdown blocks
+            clean_json = response.text.strip()
+            if "```json" in clean_json:
+                clean_json = clean_json.split("```json")[-1].split("```")[0].strip()
+            elif "```" in clean_json:
+                clean_json = clean_json.split("```")[1].strip()
+                
             result = json.loads(clean_json)
             technique = result.get('technique', 'scramble_unknown')
+            
+            # Sanity check the technique name against allowed outputs
+            valid_techs = ['double_leg', 'single_leg', 'osoto_gari', 'uchi_mata', 'seoi_nage', 'guard_pull', 'sprawl', 'triangle_choke', 'armbar', 'toreando_pass', 'scramble_unknown']
+            if technique not in valid_techs: technique = 'scramble_unknown'
             
             print(f"   ✅ Labeled: {technique} (Confidence: {result.get('confidence')})")
             
@@ -50,7 +64,11 @@ def label_dataset(input_dir="dataset/raw_clips", output_dir="dataset/train"):
         except Exception as e:
             print(f"   ❌ Failed to parse response for {filename}: {e}")
             
-        genai.delete_file(video_file.name)
+        finally:
+            try:
+                genai.delete_file(video_file.name)
+            except:
+                pass
 
 if __name__ == "__main__":
     label_dataset()

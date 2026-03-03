@@ -88,7 +88,7 @@ class GrapplingCognitiveEngine:
              )
         else:
              # Load existing zero-shot weights (e.g. Kinetics)
-             self.model = VideoMAEForVideoClassification.from_pretrained(model_id)
+             self.model = VideoMAEForVideoClassification.from_pretrained(model_id, ignore_mismatched_sizes=True)
              
         self.model.to(DEVICE)
         self.num_frames = VIDEOMAE_NUM_FRAMES
@@ -213,7 +213,8 @@ class GrapplingCognitiveEngine:
             load_best_model_at_end=True,
             metric_for_best_model="accuracy",
             fp16=False, # MPS traditionally has issues with HF FP16 mixed precision
-            use_mps_device=(DEVICE == 'mps')
+            use_mps_device=(DEVICE == 'mps'),
+            remove_unused_columns=False # Required when passing custom pixel_values
         )
 
         # 6. Initialize Trainer

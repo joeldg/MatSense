@@ -42,7 +42,12 @@ def main():
     train_cog_parser.add_argument("-d", "--dataset", default="dataset/train", help="Directory containing the training classes.")
     train_cog_parser.add_argument("-e", "--epochs", type=int, default=10, help="Number of training epochs.")
 
-    # 7. Prep Command
+    # 7. Train 3D Cognitive Command
+    train_3d_parser = subparsers.add_parser("train-3d", help="Train the Volumetric LSTM Engine on pre-computed WHAM 3D tensors.")
+    train_3d_parser.add_argument("-d", "--dataset", default="dataset/3d_tensors", help="Directory containing the pre-computed .pt tensors.")
+    train_3d_parser.add_argument("-e", "--epochs", type=int, default=25, help="Number of training epochs.")
+
+    # 8. Prep Command
     prep_parser = subparsers.add_parser("prep", help="Convert ViCoS annotations into YOLO text files.")
     prep_parser.add_argument("-d", "--data", default="annotations.json", help="Path to annotations.json")
 
@@ -130,6 +135,13 @@ def main():
             GrapplingCognitiveEngine.train_model(dataset_dir=args.dataset, epochs=args.epochs)
         except Exception as e:
             print(f"❌ Error during cognitive engine fine-tuning: {e}")
+
+    elif args.command == "train-3d":
+        from src.core.volumetric_classifier import VolumetricTechniqueClassifier
+        try:
+            VolumetricTechniqueClassifier.train_model(dataset_dir=args.dataset, epochs=args.epochs)
+        except Exception as e:
+            print(f"❌ Error during 3D Volumetric training: {e}")
 
     elif args.command == "prep":
         if os.path.exists(args.data):
