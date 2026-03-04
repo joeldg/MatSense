@@ -17,8 +17,9 @@ curl -fsSL https://pixi.sh/install.sh | bash
 # 2. Add Pixi to your path (or restart your terminal)
 # source ~/.bashrc or ~/.zshrc
 
-# 3. Create a new Pixi project and add Mojo
-pixi init
+# 3. Create a new Pixi project with Modular channels
+# You MUST include the Modular and conda-forge channels, or Pixi won't find the package!
+pixi init -c conda-forge -c https://conda.modular.com/max
 pixi add "mojo>=24.2"
 ```
 
