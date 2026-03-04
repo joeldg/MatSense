@@ -1,0 +1,11 @@
+[workspace]
+authors = ["joeldg <joeldg@gmail.com>"]
+channels = ["conda-forge", "https://conda.modular.com/max"]
+name = "mojo_core"
+platforms = ["osx-arm64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+mojo = ">=24.2"

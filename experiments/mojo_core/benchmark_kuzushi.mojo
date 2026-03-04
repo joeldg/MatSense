@@ -1,7 +1,8 @@
 from math import sqrt
-from time import now
+from time import perf_counter
+from collections import List
 
-fn calculate_fast_kuzushi(kpts: DynamicVector[Float64]) -> Bool:
+fn calculate_fast_kuzushi(kpts: List[Float64]) -> Bool:
     """
     Fast 2D biomechanics projected directly onto the broadcast video using pure Mojo.
     Expects a flattened array of 51 Float64s (17 YOLO joints * 3 dimensions).
@@ -71,27 +72,25 @@ fn main():
     print("🚀 Racing Pure Mojo (LLVM/MLIR) over", iterations, "frames...")
     
     # 1. Generate a mock batch of frames simulating the YOLO (17, 3) arrays
-    var kpts_batch = DynamicVector[DynamicVector[Float64]]()
+    var kpts_batch = List[List[Float64]]()
     
     for i in range(iterations):
-        var mock_frame = DynamicVector[Float64]()
+        var mock_frame = List[Float64]()
         # Force 51 elements to simulate 17 joints * 3 planes
         for j in range(51):
-            mock_frame.push_back(100.0 + Float64(j)) 
-        kpts_batch.push_back(mock_frame)
+            mock_frame.append(100.0 + Float64(j)) 
+        kpts_batch.append(mock_frame)
 
     # 2. Benchmark execution
-    var start_time = now()
+    var start_time = perf_counter()
     
     for i in range(iterations):
         var result = calculate_fast_kuzushi(kpts_batch[i])
         
-    var end_time = now()
-    
-    # Time returned in Nanoseconds
-    var elapsed_ns = (end_time - start_time)
-    var elapsed_sec = Float64(elapsed_ns) / 1_000_000_000.0
+    var end_time = perf_counter()
+    var elapsed_sec = end_time - start_time
 
     print("🏁 RESULTS:")
-    print("   Modular Mojo Native: ", elapsed_sec, "seconds")
+    print("   Modular Mojo Native (seconds):")
+    print(elapsed_sec)
     print("   🔥 Compare this directly against the Golang and Python output!")
