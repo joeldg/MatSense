@@ -7,23 +7,27 @@ Mojo is a superset of Python that compiles down to hardware-specific AI architec
 Unlike the Golang test (which used `ctypes` overhead to marshal memory from Python), this script runs entirely natively within the Mojo compiler as a standalone driver.
 
 ## 1. Installing the Modular SDK
-To run the `.mojo` benchmark, your machine needs the Modular Magic runtime environment. 
+To run the `.mojo` benchmark, your machine needs a compatible environment. Modular now uses **Pixi** for package management and environment setup.
 
-Run the following in your terminal to install `magic` and setup the Mojo CLI via Homebrew (macOS) or curl (Linux):
+You can install `pixi` and initialize the Mojo environment in your terminal:
 ```bash
-# Install Magic
-curl -ssL https://magic.modular.com | bash
+# 1. Install Pixi (macOS/Linux)
+curl -fsSL https://pixi.sh/install.sh | bash
 
-# Create an isolated environment for the compiler
-magic shell
+# 2. Add Pixi to your path (or restart your terminal)
+# source ~/.bashrc or ~/.zshrc
+
+# 3. Create a new Pixi project and add Mojo
+pixi init
+pixi add "mojo>=24.2"
 ```
 
 ## 2. Running the Benchmark
 Inside the `.mojo` script, we statically defined the `calculate_fast_kuzushi` algorithm using strict `Float64` constraints to allow the LLVM compiler to aggressively optimize the physics math.
 
-Once the SDK is installed, you can execute the 100,000-frame benchmark natively:
+Once the SDK is installed and the Pixi environment is active, you can execute the 100,000-frame benchmark natively:
 ```bash
-mojo run benchmark_kuzushi.mojo
+pixi run mojo benchmark_kuzushi.mojo
 ```
 
 ### Alternatively: Compile to a Standalone Executable
