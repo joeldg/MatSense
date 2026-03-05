@@ -155,3 +155,4 @@ python3 main.py train --resume
 - [x] Plumb the Data Harvester outputs automatically into zero-shot VLM APIs (Gemini 1.5 Pro) for auto-labeling.
 - [x] Fine-tune the `MCG-NJU/videomae-base` with the newly generated Grappling dataset.
 - [x] Procure and integrate the full WHAM `.pth` weights to switch the 3D Cognitive Engine from simulated mock-mode to live production mode.
+- [ ] **Mojo Native Core Rewrite:** Port the `MatchAnalyzer` and `MatchTracker` math engines from Python `numpy` into Modular's **Mojo** language. Our isolated tests (`experiments/mojo_core/`) demonstrated a **177x speedup** via LLVM/MLIR hardware vectorization, paving the way for real-time 4K processing without GPU overhead.
