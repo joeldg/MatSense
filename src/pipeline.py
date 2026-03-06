@@ -72,13 +72,40 @@ class GrapplingPipeline:
         print(f"\n🎉 MASTER PIPELINE COMPLETE: {len(all_events)} matches found! Output: {video_output_dir} 🎉")
 
     def _analyze_single_window(self, raw_data, total_frames, fps, w, h, frame_offset):
-        """Run the full analysis pipeline on a single window of raw_data. Returns [(event, timeline), ...]."""
+        """Run the full analysis pipeline on a single window of raw_data. Returns [(event, timeline), ...].
+        
+        MATCH TRIAD REQUIREMENT: A valid match requires all 3 entities:
+        1. Athlete_1 (foreground, left)
+        2. Athlete_2 (foreground, right)  
+        3. Referee (upright, orbiting)
+        
+        If any are missing, the segment is skipped (it's likely a transition/replay/leaderboard).
+        """
         anchor = self.tracker.find_foreground_anchor(raw_data, w, h, fps)
         if not anchor:
             return []
             
         true_coach_id, spec_ids, bg_ids = self.tracker.build_global_blacklist(raw_data, anchor, w, h, fps)
+        
+        # TRIAD GATE: No ref found = not a valid match segment
+        if true_coach_id is None:
+            print("   ⛔ TRIAD GATE: No referee detected — skipping segment (not a valid match)")
+            return []
+        
         resolved_timeline = self.tracker.resolve_timeline(raw_data, total_frames, anchor, true_coach_id, spec_ids, bg_ids, w, h)
+        
+        # ENGAGEMENT GATE: Verify athletes are actually engaged, not just standing idle
+        # Count frames where both athletes are detected (not melded from missing data)
+        engaged_frames = sum(1 for f, data in resolved_timeline.items() 
+                           if not data.get('melded', True) 
+                           and data.get('p1') is not None 
+                           and data.get('p2') is not None)
+        engagement_ratio = engaged_frames / max(1, total_frames)
+        
+        if engagement_ratio < 0.15:
+            # Less than 15% of frames have both athletes visible = probably not a real match
+            print(f"   ⛔ ENGAGEMENT GATE: Only {engagement_ratio:.0%} of frames have both athletes — skipping")
+            return []
         
         analyzer = MatchAnalyzer(fps, h, use_mojo=self.use_mojo)
         events = analyzer.detect_events_from_timeline(resolved_timeline, total_frames)

@@ -585,7 +585,10 @@ class MatchTracker:
             max_ar_score = 15.0 if max_ar < 0.85 else 0.0
                 
             is_upright = standing_pct > 0.60
-            is_non_interactive = interaction_rate < 0.35
+            # Relaxed from 0.35 → 0.60: Refs DO interact with athletes (resets, matework, 
+            # standing close during groundwork). The old 0.35 threshold was filtering real
+            # refs into the spectator bucket. Refs interact less than 60% of the time.
+            is_non_interactive = interaction_rate < 0.60
             
             # Combined ref scoring: all 5 signals
             if is_upright and is_non_interactive:
@@ -599,7 +602,8 @@ class MatchTracker:
                 ref_candidates.append({
                     'id': tid, 'score': ref_score, 'bw': avg_bw, 
                     'ratio': between_ratio, 'head_σ': np.std(stats['head_ys']) if stats['head_ys'] else -1,
-                    'orbit': med_orbit, 'max_ar': max_ar
+                    'orbit': med_orbit, 'max_ar': max_ar,
+                    'standing_pct': standing_pct, 'interaction_rate': interaction_rate
                 })
             else:
                 spec_ids.add(tid)
@@ -610,6 +614,35 @@ class MatchTracker:
             rc = ref_candidates[0]
             print(f"   👔 IGNORE_REF SECURED: ID {true_coach_id} | BW:{rc['bw']:.2f} Between:{rc['ratio']:.2f} Head-σ:{rc['head_σ']:.1f}px Orbit:{rc['orbit']:.0f}px MaxAR:{rc['max_ar']:.2f}")
             for cand in ref_candidates[1:]: spec_ids.add(cand['id'])
+        else:
+            # FALLBACK: If no ref found with strict gates, pick the most upright
+            # foreground entity that isn't an athlete. In a competition, there's
+            # ALWAYS a ref — we just need to relax the gate.
+            fallback_candidates = []
+            for tid, stats in global_stats.items():
+                if tid in (anchor['p1']['id'], anchor['p2']['id']): continue
+                if tid in bg_ids: continue
+                if len(stats['boxes']) < 5: continue
+                
+                boxes = np.array(stats['boxes'])
+                heights = boxes[:, 3] - boxes[:, 1]
+                aspect_ratios = (boxes[:, 2] - boxes[:, 0]) / (heights + 1e-5)
+                sp = np.mean(aspect_ratios < 0.85)
+                med_y = np.median(boxes[:, 3])
+                
+                # Must be upright >50% and in the foreground
+                if sp > 0.50 and med_y > anchor_y - (anchor_h * 0.5):
+                    fallback_candidates.append((tid, sp, med_y))
+            
+            if fallback_candidates:
+                # Pick the most consistently upright one
+                fallback_candidates.sort(key=lambda x: x[1], reverse=True)
+                true_coach_id = fallback_candidates[0][0]
+                print(f"   👔 IGNORE_REF (fallback): ID {true_coach_id} (upright {fallback_candidates[0][1]:.0%})")
+                # Remove from spec_ids if it was there
+                spec_ids.discard(true_coach_id)
+            else:
+                print("   ⚠️ WARNING: No referee detected in this segment")
                 
         return true_coach_id, spec_ids, bg_ids
 
