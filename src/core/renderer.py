@@ -3,10 +3,27 @@ import numpy as np
 from settings import HUD_COLORS, DASHBOARD_WIDTH
 
 class SkeletonEMA:
-    def __init__(self, alpha=0.75):
+    def __init__(self, alpha=0.75, use_mojo=False):
         self.history = None; self.alpha = alpha
+        self.use_mojo = use_mojo
+        self._mojo = None
+        if use_mojo:
+            try:
+                from experiments.mojo_core.mojo_adapter import MojoAccelerator
+                self._mojo = MojoAccelerator()
+                if not self._mojo.available:
+                    self._mojo = None
+                    self.use_mojo = False
+            except ImportError:
+                self.use_mojo = False
         
     def update(self, kpts):
+        if self.use_mojo and self._mojo:
+            result = self._mojo.update_skeleton_ema(self.history, kpts, self.alpha)
+            if result is not None:
+                self.history = result.copy()
+            return self.history
+
         if kpts is None:
             if self.history is not None: self.history[:, 2] *= 0.8
             return self.history
@@ -27,10 +44,11 @@ class SkeletonEMA:
         return res
 
 class BroadcastRenderer:
-    def __init__(self, fps, w, h):
+    def __init__(self, fps, w, h, use_mojo=False):
         self.fps = fps
         self.w = w
         self.h = h
+        self.use_mojo = use_mojo
         self.dash_w = DASHBOARD_WIDTH
         
         # Dynamic Scaling
@@ -53,19 +71,22 @@ class BroadcastRenderer:
                 cv2.circle(canvas, (int(pt[0]), int(pt[1])), self.r_large, HUD_COLORS["TEXT"], -1)
                 cv2.circle(canvas, (int(pt[0]), int(pt[1])), self.r_small, color, -1)
 
-    def render_event_clip(self, video_path, event, timeline, clip_id, output_dir="."):
+    def render_event_clip(self, video_path, event, timeline, match_num, output_dir="."):
         import os
         start_frame, end_frame = event['start_frame'], event['end_frame']
         cap = cv2.VideoCapture(video_path)
         
-        # Calculate Human Readable Timestamp
-        total_seconds = int(start_frame / self.fps)
-        hours = total_seconds // 3600
-        minutes = (total_seconds % 3600) // 60
-        seconds = total_seconds % 60
-        timestamp_str = f"{hours}h_{minutes:02d}m_{seconds:02d}s" if hours > 0 else f"{minutes:02d}m_{seconds:02d}s"
+        # Calculate human readable timestamps for start and end
+        def _format_time(total_seconds):
+            hrs = total_seconds // 3600
+            mins = (total_seconds % 3600) // 60
+            secs = total_seconds % 60
+            if hrs > 0:
+                return f"{hrs}h{mins:02d}m{secs:02d}s"
+            return f"{mins:02d}m{secs:02d}s"
         
-        base_name = os.path.splitext(os.path.basename(video_path))[0]
+        start_ts = _format_time(int(start_frame / self.fps))
+        end_ts = _format_time(int(end_frame / self.fps))
         
         current_frame = 0
         print(f"   🎥 Synchronizing video to exact frame {start_frame}...")
@@ -73,13 +94,18 @@ class BroadcastRenderer:
             cap.grab()
             current_frame += 1
             
-        realtime_file = f"{output_dir}/{base_name}_Event_{clip_id}_{timestamp_str}_RealSpeed.mp4"
-        slowmo_file = f"{output_dir}/{base_name}_Event_{clip_id}_{timestamp_str}_SlowMo.mp4"
+        realtime_file = f"{output_dir}/match_{match_num}_{start_ts}-{end_ts}_RealSpeed.mp4"
+        slowmo_file = f"{output_dir}/match_{match_num}_{start_ts}-{end_ts}_SlowMo.mp4"
         
         out_real = cv2.VideoWriter(realtime_file, cv2.VideoWriter_fourcc(*'mp4v'), self.fps, (self.w + self.dash_w, self.h))
         
-        ema1, ema2 = SkeletonEMA(alpha=0.75), SkeletonEMA(alpha=0.75)
-        all_rendered_frames, clip_timeline = [], []
+        ema1, ema2 = SkeletonEMA(alpha=0.75, use_mojo=self.use_mojo), SkeletonEMA(alpha=0.75, use_mojo=self.use_mojo)
+        clip_timeline = []
+        total_rendered_frames = 0
+        
+        # Pre-allocate reusable buffers to avoid per-frame allocation
+        mask_buffer = np.zeros((self.h, self.w, 3), dtype=np.uint8)
+        black_buffer = np.zeros((self.h, self.w, 3), dtype=np.uint8)
         
         while cap.isOpened() and current_frame <= end_frame:
             ret, frame = cap.read()
@@ -103,11 +129,11 @@ class BroadcastRenderer:
                 f_max_x = max(b1[2] if b1 is not None else 0, b2[2] if b2 is not None else 0)
                 f_max_y = max(b1[3] if b1 is not None else 0, b2[3] if b2 is not None else 0)
                 
-                mask = np.zeros((self.h, self.w, 3), dtype=np.uint8)
+                mask_buffer.fill(0)
                 if f_min_x != 9999:
-                    cv2.rectangle(mask, (int(f_min_x-80), int(f_min_y-80)), (int(f_max_x+80), int(f_max_y+80)), (255,255,255), -1)
-                    dimmed = cv2.addWeighted(canvas[:, :self.w], 0.35, np.zeros_like(canvas[:, :self.w]), 0, 0)
-                    canvas[:, :self.w] = np.where(mask == 255, canvas[:, :self.w], dimmed)
+                    cv2.rectangle(mask_buffer, (int(f_min_x-80), int(f_min_y-80)), (int(f_max_x+80), int(f_max_y+80)), (255,255,255), -1)
+                    dimmed = cv2.addWeighted(canvas[:, :self.w], 0.35, black_buffer, 0, 0)
+                    canvas[:, :self.w] = np.where(mask_buffer == 255, canvas[:, :self.w], dimmed)
 
                 cv2.line(canvas[:, :self.w], (0, int(z_horizon)), (self.w, int(z_horizon)), (0, 0, 255), self.th_bold)
                 cv2.putText(canvas[:, :self.w], "Z-AXIS DEPTH HORIZON", (20, int(z_horizon) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8 * self.scale, (0, 0, 255), self.th_thick)
@@ -160,42 +186,39 @@ class BroadcastRenderer:
             cv2.putText(canvas, new_state, (dash_x + int(10 * self.scale), int(225 * self.scale)), cv2.FONT_HERSHEY_SIMPLEX, 0.6 * self.scale, hud_color, self.th_thick)
 
             out_real.write(canvas)
-            all_rendered_frames.append(canvas.copy())
+            total_rendered_frames += 1
             current_frame += 1
 
         cap.release()
         out_real.release()
         
-        # Extract the semantic tag from the timeline to rename the file specifically
-        final_state = clip_timeline[-1] if clip_timeline else "Unknown"
-        semantic_tag = "Groundwork" if "NE-WAZA" in final_state else "Standing"
-        final_realtime_file = realtime_file.replace("Event_", f"{semantic_tag}_")
-        final_slowmo_file = slowmo_file.replace("Event_", f"{semantic_tag}_")
-        
-        os.rename(realtime_file, final_realtime_file)
-        realtime_file = final_realtime_file
-        
         print(f"   ✅ Saved Real-Time Output: {realtime_file}")
         
-        if len(all_rendered_frames) > 0:
+        # Generate slow-mo by re-reading the saved real-time file (avoids storing all frames in RAM)
+        if total_rendered_frames > 0:
             rel_transition = int(event['transition_frame'] - event['start_frame'])
             rel_impact = int(event['impact_frame'] - event['start_frame'])
             out_slow = cv2.VideoWriter(slowmo_file, cv2.VideoWriter_fourcc(*'mp4v'), self.fps, (self.w + self.dash_w, self.h))
             
             start_slm = max(0, rel_transition - int(self.fps * 5.0))
-            end_slm = min(len(all_rendered_frames), rel_impact + int(self.fps * 4.0))
+            end_slm = min(total_rendered_frames, rel_impact + int(self.fps * 4.0))
             
-            for idx in range(start_slm, end_slm):
-                frm = all_rendered_frames[idx].copy()
-                cv2.putText(frm, "SLOW MOTION REPLAY", (int(40*self.scale), int(80*self.scale)), cv2.FONT_HERSHEY_SIMPLEX, 1.2*self.scale, HUD_COLORS["MATE"], self.th_bold)
-                out_slow.write(frm); out_slow.write(frm); out_slow.write(frm)
-                
+            # Re-read only the slow-mo slice from the saved real-time file
+            cap_rt = cv2.VideoCapture(realtime_file)
+            rt_frame_idx = 0
+            while cap_rt.isOpened():
+                ret, frm = cap_rt.read()
+                if not ret: break
+                if start_slm <= rt_frame_idx < end_slm:
+                    cv2.putText(frm, "SLOW MOTION REPLAY", (int(40*self.scale), int(80*self.scale)), cv2.FONT_HERSHEY_SIMPLEX, 1.2*self.scale, HUD_COLORS["MATE"], self.th_bold)
+                    out_slow.write(frm); out_slow.write(frm); out_slow.write(frm)
+                elif rt_frame_idx >= end_slm:
+                    break
+                rt_frame_idx += 1
+            cap_rt.release()
             out_slow.release()
             
             if os.path.exists(slowmo_file):
-                os.rename(slowmo_file, final_slowmo_file)
-                slowmo_file = final_slowmo_file
-                
-            print(f"   🎥 Saved Cinematic Slow-Mo: {slowmo_file}")
+                print(f"   🎥 Saved Cinematic Slow-Mo: {slowmo_file}")
 
         return {"filename": realtime_file, "slow_mo_file": slowmo_file, "phases": clip_timeline}

@@ -7,6 +7,47 @@ from transformers import VideoMAEImageProcessor, VideoMAEForVideoClassification,
 import evaluate
 from settings import DEVICE, DEFAULT_VIDEOMAE_MODEL, VIDEOMAE_NUM_FRAMES
 
+
+def sample_video_frames(video_path, num_frames=16):
+    """Uniformly sample frames using efficient forward-pass reading (grab + selective retrieve)."""
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        raise FileNotFoundError(f"Cannot open video: {video_path}")
+    
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    if total_frames == 0:
+        raise ValueError(f"Video {video_path} has 0 frames")
+    
+    indices = set(np.linspace(0, total_frames - 1, num_frames, dtype=int))
+    sorted_indices = sorted(indices)
+    
+    frames = []
+    frame_idx = 0
+    target_ptr = 0
+    
+    while cap.isOpened() and target_ptr < len(sorted_indices):
+        if frame_idx == sorted_indices[target_ptr]:
+            ret, frame = cap.read()
+            if ret:
+                frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+            else:
+                frames.append(frames[-1] if frames else np.zeros((224, 224, 3), dtype=np.uint8))
+            target_ptr += 1
+            # Handle duplicate indices (when total_frames < num_frames)
+            while target_ptr < len(sorted_indices) and sorted_indices[target_ptr] == frame_idx:
+                frames.append(frames[-1])
+                target_ptr += 1
+        else:
+            cap.grab()  # Skip without decoding
+        frame_idx += 1
+    
+    # Pad if we didn't get enough frames
+    while len(frames) < num_frames:
+        frames.append(frames[-1] if frames else np.zeros((224, 224, 3), dtype=np.uint8))
+    
+    cap.release()
+    return frames
+
 class VideoClipDataset(Dataset):
     """
     Custom PyTorch Dataset for loading 16-frame VideoMAE tensors from .mp4 clips.
@@ -33,28 +74,7 @@ class VideoClipDataset(Dataset):
         return len(self.samples)
 
     def _sample_frames(self, video_path):
-        cap = cv2.VideoCapture(video_path)
-        if not cap.isOpened():
-            raise FileNotFoundError(f"Cannot open video: {video_path}")
-            
-        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        if total_frames == 0:
-            raise ValueError(f"Video {video_path} has 0 frames")
-            
-        indices = np.linspace(0, total_frames - 1, self.num_frames, dtype=int)
-        
-        frames = []
-        for idx in indices:
-            cap.set(cv2.CAP_PROP_POS_FRAMES, idx)
-            ret, frame = cap.read()
-            if ret:
-                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                frames.append(frame_rgb)
-            else:
-                if frames: frames.append(frames[-1])
-                else: frames.append(np.zeros((224, 224, 3), dtype=np.uint8))
-        cap.release()
-        return frames
+        return sample_video_frames(video_path, self.num_frames)
 
     def __getitem__(self, idx):
         video_path, label = self.samples[idx]
@@ -94,34 +114,8 @@ class GrapplingCognitiveEngine:
         self.num_frames = VIDEOMAE_NUM_FRAMES
 
     def _sample_frames(self, video_path):
-        """Uniformly samples frames from the video using OpenCV."""
-        cap = cv2.VideoCapture(video_path)
-        if not cap.isOpened():
-            raise FileNotFoundError(f"Cannot open video for classification: {video_path}")
-            
-        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        if total_frames == 0:
-            raise ValueError(f"Video {video_path} has 0 frames")
-            
-        indices = np.linspace(0, total_frames - 1, self.num_frames, dtype=int)
-        
-        frames = []
-        for idx in indices:
-            cap.set(cv2.CAP_PROP_POS_FRAMES, idx)
-            ret, frame = cap.read()
-            if ret:
-                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                frames.append(frame_rgb)
-            else:
-                # Fallback if frame read fails; duplicate last valid frame
-                if frames:
-                    frames.append(frames[-1])
-                else: 
-                     # Create dummy blank frame if even the first read fails
-                     frames.append(np.zeros((224, 224, 3), dtype=np.uint8))
-                     
-        cap.release()
-        return frames
+        """Uniformly samples frames from the video."""
+        return sample_video_frames(video_path, self.num_frames)
 
     def predict_technique(self, video_path) -> dict:
         """

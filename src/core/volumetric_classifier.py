@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import os
 from settings import DEVICE
 
 class LightweightTrajectoryClassifier(nn.Module):
@@ -101,8 +102,8 @@ class VolumetricTechniqueClassifier:
         mesh_sequence_tensor: (Time, Joints, 3)
         """
         try:
-            # Add batch dimension
-            x = mesh_sequence_tensor.unsqueeze(0)
+            # Add batch dimension and force to the correct hardware device
+            x = mesh_sequence_tensor.unsqueeze(0).to(self.device)
             
             with torch.no_grad():
                 logits = self.model(x)
@@ -134,6 +135,9 @@ class VolumetricTechniqueClassifier:
         dataset = TensorDataset3D(dataset_dir)
         if len(dataset) == 0:
             print("❌ No .pt files found. Did you run `tools/bulk_extract_wham_tensors.py`?")
+            return
+        if len(dataset) < 3:
+            print("❌ Need at least 3 samples to split into train/eval. Aborting.")
             return
             
         # 1. Map dynamic dataset classes back into the architecture
@@ -187,7 +191,7 @@ class VolumetricTechniqueClassifier:
                     _, predicted = torch.max(outputs, 1)
                     correct += (predicted == batch_y).sum().item()
                     
-            val_acc = correct / eval_size
+            val_acc = correct / max(1, eval_size)
             print(f"Epoch {epoch+1}/{epochs} | Loss: {train_loss:.4f} | Val Acc: {val_acc:.4f}")
             
             if val_acc > best_acc:

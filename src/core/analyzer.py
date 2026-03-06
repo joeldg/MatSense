@@ -15,21 +15,35 @@ def calculate_fast_kuzushi(kpts):
         
         ab = l_ankle - r_ankle
         ap = com - r_ankle
-        t = 0 if np.dot(ab, ab) == 0 else max(0.0, min(1.0, np.dot(ap, ab) / np.dot(ab, ab)))
+        ab_dot = np.dot(ab, ab)
+        t = 0 if ab_dot == 0 else max(0.0, min(1.0, np.dot(ap, ab) / ab_dot))
         closest_point = r_ankle + t * ab
-        distance_to_base = np.linalg.norm(com - closest_point)
+        diff = com - closest_point
+        distance_sq = np.dot(diff, diff)
         
         dynamic_threshold = 15.0 + (stance_width * 0.30)
-        is_kuzushi = distance_to_base > dynamic_threshold
+        is_kuzushi = distance_sq > dynamic_threshold * dynamic_threshold
+        distance_to_base = np.sqrt(distance_sq)  # Only compute sqrt for the return value
         
         return com, closest_point, distance_to_base, is_kuzushi
     except Exception:
         return None, None, 0, False
 
 class MatchAnalyzer:
-    def __init__(self, fps, height):
+    def __init__(self, fps, height, use_mojo=False):
         self.fps = fps
         self.h = height
+        self.use_mojo = use_mojo
+        self._mojo = None
+        if use_mojo:
+            try:
+                from experiments.mojo_core.mojo_adapter import MojoAccelerator
+                self._mojo = MojoAccelerator()
+                if not self._mojo.available:
+                    self._mojo = None
+                    self.use_mojo = False
+            except ImportError:
+                self.use_mojo = False
 
     def detect_events_from_timeline(self, timeline, total_frames):
         print("\n📊 [PHASE 3] EXECUTING KINEMATIC TRANSITION MATRIX...")
@@ -48,7 +62,7 @@ class MatchAnalyzer:
                 raw_tops.append(raw_tops[-1] if len(raw_tops) > 0 else self.h * 0.2)
                 max_ar_arr.append(max_ar_arr[-1] if len(max_ar_arr) > 0 else 1.0)
                 
-        window = int(self.fps * 1.5) | 1
+        window = max(5, int(self.fps * 1.5) | 1)
         smooth_heights = savgol_filter(raw_heights, window_length=window, polyorder=2) if total_frames > window else np.array(raw_heights)
         smooth_tops = savgol_filter(raw_tops, window_length=window, polyorder=2) if total_frames > window else np.array(raw_tops)
                    
@@ -67,11 +81,11 @@ class MatchAnalyzer:
             if c_h < standing_h * 0.60 or max_ar > 1.35 or melded:
                 ground_frames += 1
             else:
-                if ground_frames < self.fps * 1.0: 
-                    ground_frames = 0
                 if c_h > standing_h * 0.8 and max_ar < 1.0 and not melded:
                     is_standing = True
-                    
+                    ground_frames = 0
+                elif ground_frames < self.fps * 1.0:
+                    ground_frames = 0
             if is_standing and ground_frames >= int(self.fps * 1.5):
                 impact_frame = f - int(self.fps * 1.5)
                 
@@ -90,25 +104,30 @@ class MatchAnalyzer:
                 is_standing = False
                 
         if impacts:
-            best_event = max(impacts, key=lambda x: x['severity'])
-            impact_f = best_event['impact_frame']
-            trans_f = best_event['transition_frame']
+            # Sort by frame order and deduplicate nearby impacts (within 3 sec)
+            impacts.sort(key=lambda x: x['impact_frame'])
+            deduped = [impacts[0]]
+            for imp in impacts[1:]:
+                if imp['impact_frame'] - deduped[-1]['impact_frame'] > self.fps * 3:
+                    deduped.append(imp)
+                elif imp['severity'] > deduped[-1]['severity']:
+                    deduped[-1] = imp  # Keep higher severity if overlapping
             
-            print(f"      💥 TAKEDOWN VERIFIED! Transition: {trans_f/self.fps:.1f}s -> Impact: {impact_f/self.fps:.1f}s")
-            return [{
-                "transition_frame": trans_f,
-                "impact_frame": impact_f,
-                "start_frame": max(0, int(trans_f - (8.0 * self.fps))), 
-                "end_frame": min(total_frames - 1, int(impact_f + (9.0 * self.fps))),
-                "severity": best_event['severity']
-            }]
+            events = []
+            for ev in deduped:
+                impact_f = ev['impact_frame']
+                trans_f = ev['transition_frame']
+                print(f"      💥 TAKEDOWN VERIFIED! Transition: {trans_f/self.fps:.1f}s -> Impact: {impact_f/self.fps:.1f}s (severity: {ev['severity']:.1f})")
+                events.append({
+                    "transition_frame": trans_f,
+                    "impact_frame": impact_f,
+                    "start_frame": max(0, int(trans_f - (8.0 * self.fps))), 
+                    "end_frame": min(total_frames - 1, int(impact_f + (9.0 * self.fps))),
+                    "severity": ev['severity']
+                })
+            
+            print(f"   📊 Total events in window: {len(events)}")
+            return events
                 
-        print("   ⚠️ No definitive throw found. Defaulting to lowest altitude...")
-        lowest_f = int(np.argmax(smooth_tops))
-        return [{
-            "transition_frame": lowest_f,
-            "impact_frame": lowest_f, 
-            "start_frame": max(0, int(lowest_f - (8.0 * self.fps))), 
-            "end_frame": min(total_frames - 1, int(lowest_f + (9.0 * self.fps))),
-            "severity": 0
-        }]
+        print("   ⚠️ No definitive throw found in this window.")
+        return []

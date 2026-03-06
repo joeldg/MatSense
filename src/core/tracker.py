@@ -1,8 +1,88 @@
 import cv2
+import math
 import numpy as np
 from collections import defaultdict
 from scipy.optimize import linear_sum_assignment
 from settings import DEVICE
+
+def is_overlay_frame(frame, num_detections, rolling_det_median, h, w):
+    """Detect leaderboard/scoreboard overlay frames useless for training.
+    
+    Multiple signals are checked — any one triggers a skip:
+    1. Detection count anomaly vs rolling baseline  
+    2. Low color variance in top/bottom strips (solid-color leaderboard bars)
+    3. High horizontal edge density in strips (text-heavy leaderboards)
+    4. Single dominant color covering center of frame (graphic overlays)
+    """
+    # 1. Detection anomaly — sudden loss of people in mid-video
+    if rolling_det_median >= 2 and num_detections <= 0:
+        return True
+    
+    # 2. Color variance in top/bottom strips (leaderboard zones)
+    top_strip = frame[0:int(h * 0.18), :]
+    bot_strip = frame[int(h * 0.82):, :]
+    
+    top_var = np.var(top_strip.astype(np.float32)) if top_strip.size > 0 else 999
+    bot_var = np.var(bot_strip.astype(np.float32)) if bot_strip.size > 0 else 999
+    
+    # Low-variance bands = graphic overlay (raised threshold to catch more)
+    if top_var < 1200 and bot_var < 1200:
+        return True
+    
+    # 3. Horizontal edge density in strips — text creates strong Sobel-Y edges
+    for strip in [top_strip, bot_strip]:
+        if strip.size > 0:
+            gray_strip = cv2.cvtColor(strip, cv2.COLOR_BGR2GRAY)
+            sobel_y = cv2.Sobel(gray_strip, cv2.CV_64F, 0, 1, ksize=3)
+            h_edge_density = np.mean(np.abs(sobel_y)) 
+            # High horizontal edge density = text-heavy leaderboard
+            if h_edge_density > 15.0 and num_detections <= 2:
+                return True
+    
+    # 4. Dominant color check — if center is mostly one color, it's a graphic
+    center = frame[int(h * 0.25):int(h * 0.75), int(w * 0.15):int(w * 0.85)]
+    if center.size > 0:
+        hsv_center = cv2.cvtColor(center, cv2.COLOR_BGR2HSV)
+        # Check if >50% of pixels share a narrow hue range (within 20 bins)
+        hue_hist = cv2.calcHist([hsv_center], [0], None, [18], [0, 180])
+        total_px = hsv_center.shape[0] * hsv_center.shape[1]
+        max_bin_pct = float(np.max(hue_hist)) / (total_px + 1e-5)
+        if max_bin_pct > 0.55 and num_detections <= 1:
+            return True
+    
+    # 5. Low edge complexity in center + few detections = title card
+    if center.size > 0:
+        gray = cv2.cvtColor(center, cv2.COLOR_BGR2GRAY)
+        edges = cv2.Canny(gray, 50, 150)
+        edge_density = np.count_nonzero(edges) / (edges.shape[0] * edges.shape[1] + 1e-5)
+        if edge_density < 0.02 and num_detections <= 1:
+            return True
+    
+    return False
+
+
+def is_camera_blocked(detections, h, w):
+    """Detect when someone is standing right in front of the camera, dominating the view.
+    
+    A single person occupying >45% of frame area or a person touching the bottom
+    of the frame and taller than 55% of frame height is likely blocking the camera.
+    """
+    frame_area = h * w
+    for det in detections:
+        b = det['box']
+        det_w = b[2] - b[0]
+        det_h = b[3] - b[1]
+        det_area = det_w * det_h
+        
+        # Single detection covers >45% of frame
+        if det_area > frame_area * 0.45:
+            return True
+        
+        # Person touching bottom of frame and very tall (standing right in front)
+        if b[3] > h * 0.95 and det_h > h * 0.55:
+            return True
+    
+    return False
 
 def bb_iou(boxA, boxB):
     xA, yA = max(boxA[0], boxB[0]), max(boxA[1], boxB[1])
@@ -34,11 +114,22 @@ def get_color_hist(frame, box, w, h):
         bw_score = np.sum(hist[:, 0:3]) 
         
         return {'hist': hist, 'bw_score': bw_score}
-    except: return None
+    except Exception: return None
 
 class MatchTracker:
-    def __init__(self, model):
+    def __init__(self, model, use_mojo=False):
         self.model = model
+        self.use_mojo = use_mojo
+        self._mojo = None
+        if use_mojo:
+            try:
+                from experiments.mojo_core.mojo_adapter import MojoAccelerator
+                self._mojo = MojoAccelerator()
+                if not self._mojo.available:
+                    self._mojo = None
+                    self.use_mojo = False
+            except ImportError:
+                self.use_mojo = False
 
     def extract_raw_data(self, video_path):
         cap = cv2.VideoCapture(video_path)
@@ -51,38 +142,85 @@ class MatchTracker:
         frame_idx = 0
         half_opt = (DEVICE != 'cpu')
         
-        print(f"\n🚀 [PHASE 1] BOT-SORT CENSUS: Mapping all entities (1:1 Sync Locked)...")
-        print(f"   ⚡ Hardware Engine: {DEVICE.upper()}")
+        skip = 3
+        hist_interval = 3
+        processed_count = 0
+        last_dets = []
+        overlay_count = 0
+        
+        # Rolling detection count for overlay detection baseline
+        recent_det_counts = []
+        rolling_det_median = 0
+        
+        effective_fps = fps / skip
+        print(f"\n🚀 [PHASE 1] BOT-SORT CENSUS: Mapping all entities (skip={skip}, ~{effective_fps:.0f} effective fps)...")
+        print(f"   ⚡ Hardware Engine: {DEVICE.upper()} | imgsz=640 | processing ~{total_frames // skip} of {total_frames} frames")
         
         while cap.isOpened():
+            if frame_idx % skip != 0:
+                grabbed = cap.grab()
+                if not grabbed:
+                    break
+                raw_data[frame_idx] = last_dets
+                frame_idx += 1
+                continue
+            
             ret, frame = cap.read()
             if not ret: break
             
             results = self.model.track(
                 frame, persist=True, tracker='botsort.yaml', 
-                device=DEVICE, half=half_opt, imgsz=1024, 
+                device=DEVICE, half=half_opt, imgsz=640, 
                 verbose=False, conf=0.25, classes=[0]
             )
             
             dets = []
+            compute_hist = (processed_count % hist_interval == 0)
             if results[0].boxes is not None and results[0].boxes.id is not None:
                 boxes = results[0].boxes.xyxy.cpu().numpy().copy()
                 ids = results[0].boxes.id.cpu().numpy().astype(int).copy()
                 kpts = results[0].keypoints.data.cpu().numpy().copy() if results[0].keypoints is not None else [None]*len(boxes)
                 
                 for b, tid, k in zip(boxes, ids, kpts):
-                    color_data = get_color_hist(frame, b, w, h)
-                    hist = color_data['hist'] if color_data else None
-                    bw_score = color_data['bw_score'] if color_data else 0.0
+                    if compute_hist:
+                        color_data = get_color_hist(frame, b, w, h)
+                        hist = color_data['hist'] if color_data else None
+                        bw_score = color_data['bw_score'] if color_data else 0.0
+                    else:
+                        hist = None
+                        bw_score = 0.0
                     dets.append({'box': b, 'id': tid, 'kpt': k, 'hist': hist, 'bw_score': bw_score})
-            raw_data[frame_idx] = dets
             
+            # Overlay frame detection — flag leaderboard/graphic frames
+            if is_overlay_frame(frame, len(dets), rolling_det_median, h, w):
+                raw_data[frame_idx] = []
+                last_dets = []
+                overlay_count += 1
+            # Camera-blocker detection — person dominating the view
+            elif len(dets) > 0 and is_camera_blocked(dets, h, w):
+                raw_data[frame_idx] = []
+                last_dets = []
+                overlay_count += 1
+            else:
+                raw_data[frame_idx] = dets
+                last_dets = dets
+            
+            # Update rolling detection baseline
+            recent_det_counts.append(len(dets))
+            if len(recent_det_counts) > 30:
+                recent_det_counts.pop(0)
+            rolling_det_median = np.median(recent_det_counts) if recent_det_counts else 0
+            
+            processed_count += 1
             frame_idx += 1
-            if frame_idx % max(1, int(fps * 3)) == 0:
+            
+            if processed_count % max(1, int(effective_fps * 3)) == 0:
                 print(f"   ... Processed {frame_idx}/{total_frames} frames ({(frame_idx/total_frames)*100:.1f}%)")
                 
         cap.release()
+        print(f"   ✅ Census complete: {processed_count} YOLO frames, {overlay_count} overlay frames filtered, {frame_idx - processed_count} skipped")
         return raw_data, total_frames, fps, w, h
+
 
     def find_foreground_anchor(self, raw_data, w, h, fps):
         print("\n🔍 [PHASE 2a] ENGAGEMENT MATRIX: Isolating Absolute Foreground Athletes...")
@@ -99,31 +237,45 @@ class MatchTracker:
                     h1, h2 = b1[3]-b1[1], b2[3]-b2[1]
                     
                     if max(h1, h2) / (min(h1, h2) + 1e-5) > 1.8: continue 
+                    score = 0.0
+                    should_skip = False
+                    if self.use_mojo and self._mojo:
+                        score, should_skip = self._mojo.score_foreground_pair(b1, b2, w, h)
+                    else:
+                        if max(h1, h2) / (min(h1, h2) + 1e-5) > 1.8: continue 
+                        
+                        cx1, cy1 = (b1[0]+b1[2])/2, (b1[1]+b1[3])/2
+                        cx2, cy2 = (b2[0]+b2[2])/2, (b2[1]+b2[3])/2
+                        if math.hypot(cx1-cx2, cy1-cy2) > max(h1, h2) * 2.5: continue 
+                        
+                        overlap_x = max(0, min(b1[2], b2[2]) - max(b1[0], b2[0]))
+                        overlap_y = max(0, min(b1[3], b2[3]) - max(b1[1], b2[1]))
+                        
+                        # 1. DEPTH HEURISTIC: Use MIN depth instead of MAX so BOTH feet must be close to camera
+                        fg_y = min(b1[3], b2[3]) / h
+                        
+                        # 2. SIZE HEURISTIC: Prefer larger objects slightly, but prioritize centering
+                        size_h = max(h1, h2) / h
+                        
+                        # 3. CENTER HEURISTIC: Heavily prioritize pairs interacting near the center of the frame
+                        center = 1.0 - (abs(((cx1+cx2)/2) - w/2) / (w/2))
+                        
+                        # 4. ASPECT RATIO PENALTY: Referees are usually tall/skinny (<0.5 aspect). Grapplers are wider.
+                        aspect1 = (b1[2]-b1[0]) / (h1 + 1e-5)
+                        aspect2 = (b2[2]-b2[0]) / (h2 + 1e-5)
+                        ref_penalty = -50.0 if (aspect1 < 0.6 or aspect2 < 0.6) else 0.0
+                        
+                        # 5. LEFT/RIGHT APPROACH: Players typically come from opposite sides
+                        # Bonus when one is left-of-center and other is right-of-center
+                        mid_x = w / 2.0
+                        lr_bonus = 25.0 if (cx1 < mid_x and cx2 > mid_x) or (cx1 > mid_x and cx2 < mid_x) else 0.0
+                        
+                        score = (fg_y ** 3) * 75.0 + (size_h ** 2) * 15.0 + (center * 75.0) + ref_penalty + lr_bonus
+                        if overlap_x * overlap_y > 0:
+                            score += 15.0
                     
-                    cx1, cy1 = (b1[0]+b1[2])/2, (b1[1]+b1[3])/2
-                    cx2, cy2 = (b2[0]+b2[2])/2, (b2[1]+b2[3])/2
-                    if np.hypot(cx1-cx2, cy1-cy2) > max(h1, h2) * 2.5: continue 
-                    
-                    overlap_x = max(0, min(b1[2], b2[2]) - max(b1[0], b2[0]))
-                    overlap_y = max(0, min(b1[3], b2[3]) - max(b1[1], b2[1]))
-                    
-                    # 1. DEPTH HEURISTIC: Use MIN depth instead of MAX so BOTH feet must be close to camera
-                    fg_y = min(b1[3], b2[3]) / h
-                    
-                    # 2. SIZE HEURISTIC: Prefer larger objects slightly, but prioritize centering
-                    size_h = max(h1, h2) / h
-                    
-                    # 3. CENTER HEURISTIC: Heavily prioritize pairs interacting near the center of the frame
-                    center = 1.0 - (abs(((cx1+cx2)/2) - w/2) / (w/2))
-                    
-                    # 4. ASPECT RATIO PENALTY: Referees are usually tall/skinny (<0.5 aspect). Grapplers are wider.
-                    aspect1 = (b1[2]-b1[0]) / (h1 + 1e-5)
-                    aspect2 = (b2[2]-b2[0]) / (h2 + 1e-5)
-                    ref_penalty = -50.0 if (aspect1 < 0.6 or aspect2 < 0.6) else 0.0
-                    
-                    score = (fg_y ** 3) * 75.0 + (size_h ** 2) * 15.0 + (center * 75.0) + ref_penalty
-                    if overlap_x * overlap_y > 0:
-                        score += 15.0
+                    if should_skip:
+                        continue
                     
                     pair_id = tuple(sorted([dets[i]['id'], dets[j]['id']]))
                     pair_stats[pair_id].append(score)
@@ -295,12 +447,13 @@ class MatchTracker:
 
             shift_x, shift_y = 0.0, 0.0
             if prev_dets:
+                prev_by_id = {d['id']: d for d in prev_dets}
                 sx, sy = [], []
                 for cd in current_dets:
-                    for pd in prev_dets:
-                        if cd['id'] == pd['id']:
-                            sx.append(((cd['box'][0]+cd['box'][2])/2) - ((pd['box'][0]+pd['box'][2])/2))
-                            sy.append(((cd['box'][1]+cd['box'][3])/2) - ((pd['box'][1]+pd['box'][3])/2))
+                    pd = prev_by_id.get(cd['id'])
+                    if pd:
+                        sx.append(((cd['box'][0]+cd['box'][2])/2) - ((pd['box'][0]+pd['box'][2])/2))
+                        sy.append(((cd['box'][1]+cd['box'][3])/2) - ((pd['box'][1]+pd['box'][3])/2))
                 if sx: shift_x, shift_y = np.median(sx), np.median(sy)
                 
             for prof in [p1_prof, p2_prof]:
@@ -318,7 +471,7 @@ class MatchTracker:
                 if tid in bg_ids: bg.append(det); continue
                 
                 dcx, dcy = (b[0]+b[2])/2, (b[1]+b[3])/2
-                dist_to_action = np.hypot(dcx - action_cx, dcy - action_cy)
+                dist_to_action = math.hypot(dcx - action_cx, dcy - action_cy)
                 
                 if b[3] < y_ema - (h_ema * 0.35): bg.append(det); continue
                 if dist_to_action > h_ema * 2.0 and tid not in (p1_prof['id'], p2_prof['id']) and tid not in (p1_prof['pure_id'], p2_prof['pure_id']):
@@ -330,17 +483,30 @@ class MatchTracker:
             if len(valid_cands) > 0:
                 cost_matrix = np.zeros((2, len(valid_cands)))
                 for i, target in enumerate(targets):
+                    other = targets[1 - i]
                     for j, cand in enumerate(valid_cands):
                         cost = 0.0
                         
+                        # ID match bonuses
                         if cand['id'] == target['id']: cost -= 200.0 
                         if cand['id'] == target.get('pure_id'): cost -= 300.0 
                         
                         tcx, tcy = (target['box'][0]+target['box'][2])/2, (target['box'][1]+target['box'][3])/2
                         ccx, ccy = (cand['box'][0]+cand['box'][2])/2, (cand['box'][1]+cand['box'][3])/2
-                        dist = np.hypot(tcx-ccx, tcy-ccy)
-                        if dist > w * 0.25: cost += 2000.0 
+                        dist = math.hypot(tcx-ccx, tcy-ccy)
+                        
+                        # ANTI-TELEPORT: massive penalty if jump > 30% of frame width
+                        # People don't teleport between frames
+                        if dist > w * 0.30: cost += 5000.0
+                        elif dist > w * 0.25: cost += 2000.0 
                         cost += (dist / w) * 200.0
+                        
+                        # CROSS-ASSIGNMENT PENALTY: if candidate is closer to the OTHER
+                        # profile than to this target, penalize to prevent swaps
+                        ocx, ocy = (other['box'][0]+other['box'][2])/2, (other['box'][1]+other['box'][3])/2
+                        dist_to_other = math.hypot(ocx-ccx, ocy-ccy)
+                        if dist_to_other < dist * 0.5:
+                            cost += 500.0  # Much closer to the other player = likely a swap
                         
                         iou = bb_iou(target['box'], cand['box'])
                         cost -= (iou * 200.0)
@@ -404,7 +570,8 @@ class MatchTracker:
             res = {'p1': p1_det, 'p2': p2_det, 'melded': melded, 'bg': bg, 'ref': ref, 'spec': spec, 'unk': unk, 'z_horizon': y_ema}
             return res, p1_prof, p2_prof, y_ema, h_ema
 
-        p1_profile, p2_profile = anchor['p1'].copy(), anchor['p2'].copy()
+        import copy
+        p1_profile, p2_profile = copy.deepcopy(anchor['p1']), copy.deepcopy(anchor['p2'])
         p1_profile['base_hist'] = p1_profile.get('hist').copy() if p1_profile.get('hist') is not None else None
         p2_profile['base_hist'] = p2_profile.get('hist').copy() if p2_profile.get('hist') is not None else None
         p1_profile['pure_id'] = p1_profile['id']
@@ -415,14 +582,14 @@ class MatchTracker:
 
         timeline[anchor['f']] = {'p1': p1_profile.copy(), 'p2': p2_profile.copy(), 'melded': False, 'bg': [], 'ref': [], 'spec': [], 'unk': [], 'z_horizon': action_y_ema}
 
-        p1_f, p2_f, y_f, h_f = p1_profile.copy(), p2_profile.copy(), action_y_ema, action_h_ema
+        p1_f, p2_f, y_f, h_f = copy.deepcopy(p1_profile), copy.deepcopy(p2_profile), action_y_ema, action_h_ema
         for f in range(anchor['f'] + 1, total_frames):
             cd = raw_data.get(f, [])
             pd = raw_data.get(f-1, [])
             res, p1_f, p2_f, y_f, h_f = step_tracker(f, pd, cd, p1_f, p2_f, y_f, h_f)
             timeline[f] = res
 
-        p1_b, p2_b, y_b, h_b = p1_profile.copy(), p2_profile.copy(), action_y_ema, action_h_ema
+        p1_b, p2_b, y_b, h_b = copy.deepcopy(p1_profile), copy.deepcopy(p2_profile), action_y_ema, action_h_ema
         for f in range(anchor['f'] - 1, -1, -1):
             cd = raw_data.get(f, [])
             nd = raw_data.get(f+1, []) 

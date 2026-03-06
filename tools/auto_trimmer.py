@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 from ultralytics import YOLO
 import os
+from settings import DEVICE
 
 def find_all_takedowns(video_path):
     print(f"🔍 [INTAKE FILTER V5] Center-Gravity Skeletal Tracking: {video_path}")
@@ -35,7 +36,7 @@ def find_all_takedowns(video_path):
             
         if frame_idx % current_skip == 0:
             # Force CPU so it doesn't interrupt your M4 overnight training!
-            results = model.predict(frame, classes=[0], device='cpu', verbose=False) 
+            results = model.predict(frame, classes=[0], device=DEVICE, verbose=False) 
             
             if results[0].keypoints is not None and len(results[0].keypoints.data) >= 2:
                 # Mat is active - Reset to fine-grained inspection
@@ -151,9 +152,13 @@ def trim_all_highlights(video_path, impact_frames, fps, pre_buffer=4.0, post_buf
     # Extract Base Filename safely
     base_name = os.path.splitext(os.path.basename(video_path))[0]
     
-    print(f"\n🎬 Auto-Generating {len(impact_frames)} Highlight Reels from {base_name}...")
+    # Sort impact frames to enable single forward pass
+    sorted_impacts = sorted(enumerate(impact_frames), key=lambda x: x[1])
     
-    for clip_num, impact_frame in enumerate(impact_frames, 1):
+    print(f"\n🎥 Auto-Generating {len(impact_frames)} Highlight Reels from {base_name}...")
+    
+    for orig_idx, impact_frame in sorted_impacts:
+        clip_num = orig_idx + 1
         start_frame = max(0, int(impact_frame - (pre_buffer * fps)))
         end_frame = int(impact_frame + (post_buffer * fps))
         
@@ -173,12 +178,9 @@ def trim_all_highlights(video_path, impact_frames, fps, pre_buffer=4.0, post_buf
         
         print(f"✂️  Extracting Match Event {clip_num}: {start_frame/fps:.1f}s to {end_frame/fps:.1f}s...")
         
-        cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-        current_frame = 0
-        while current_frame < start_frame:
-            ret = cap.grab()
-            if not ret: break
-            current_frame += 1
+        # Direct seek — no tracking IDs needed for trimming
+        cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
+        current_frame = start_frame
             
         while cap.isOpened() and current_frame <= end_frame:
             ret, frame = cap.read()

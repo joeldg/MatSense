@@ -1,20 +1,1031 @@
 {
-    "source_video": "tmp_downloads/yt_ce70d4c6.mp4",
-    "total_engagements": 1,
+    "source_video": "tmp_downloads/yt_3014722f.mp4",
+    "total_engagements": 146,
     "highlights": [
         {
-            "filename": "./yt_ce70d4c6_Groundwork_1_00m_00s_RealSpeed.mp4",
-            "slow_mo_filename": "./yt_ce70d4c6_Groundwork_1_00m_00s_SlowMo.mp4",
+            "filename": "./yt_3014722f_Groundwork_1_00m_00s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Groundwork_1_00m_00s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_1.mp4",
             "phases_detected": [
-                "NE-WAZA / PIN DETECTED",
-                "STANDING (TACHI-WAZA)",
-                "NE-WAZA / GROUNDWORK",
-                "STANDING (TACHI-WAZA)",
-                "NE-WAZA / GROUNDWORK",
                 "STANDING (TACHI-WAZA)",
                 "NE-WAZA / GROUNDWORK"
             ],
             "match_timestamp_sec": 0.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_2_01m_36s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_2_01m_36s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_2.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 96.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_3_03m_12s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_3_03m_12s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_3.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 192.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_4_04m_48s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_4_04m_48s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_4.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 288.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_5_06m_24s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_5_06m_24s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_5.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 384.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_6_08m_00s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_6_08m_00s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_6.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 480.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_7_12m_48s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_7_12m_48s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_7.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 768.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_8_16m_00s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_8_16m_00s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_8.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 960.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_9_17m_36s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_9_17m_36s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_9.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 1056.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_10_20m_48s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_10_20m_48s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_10.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 1248.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_11_22m_24s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_11_22m_24s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_11.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 1344.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_12_24m_00s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_12_24m_00s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_12.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 1440.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_13_25m_36s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_13_25m_36s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_13.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 1536.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_14_27m_12s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_14_27m_12s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_14.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 1632.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_15_28m_48s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_15_28m_48s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_15.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 1728.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_16_30m_24s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_16_30m_24s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_16.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 1824.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_17_32m_00s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_17_32m_00s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_17.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 1920.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_18_33m_44s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_18_33m_44s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_18.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 2024.6
+        },
+        {
+            "filename": "./yt_3014722f_Standing_19_35m_12s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_19_35m_12s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_19.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 2112.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_20_36m_48s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_20_36m_48s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_20.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 2208.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_21_38m_24s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_21_38m_24s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_21.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 2304.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_22_40m_00s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_22_40m_00s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_22.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 2400.3
+        },
+        {
+            "filename": "./yt_3014722f_Standing_23_41m_36s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_23_41m_36s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_23.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 2496.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_24_43m_12s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_24_43m_12s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_24.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 2592.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_25_44m_48s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_25_44m_48s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_25.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 2688.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_26_46m_24s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_26_46m_24s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_26.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 2784.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_27_48m_26s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_27_48m_26s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_27.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 2906.8
+        },
+        {
+            "filename": "./yt_3014722f_Standing_28_49m_36s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_28_49m_36s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_28.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 2976.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_29_51m_12s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_29_51m_12s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_29.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 3072.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_30_53m_07s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_30_53m_07s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_30.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 3187.9
+        },
+        {
+            "filename": "./yt_3014722f_Standing_31_54m_32s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_31_54m_32s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_31.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 3272.4
+        },
+        {
+            "filename": "./yt_3014722f_Standing_32_56m_11s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_32_56m_11s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_32.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 3371.6
+        },
+        {
+            "filename": "./yt_3014722f_Standing_33_57m_36s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_33_57m_36s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_33.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 3456.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_34_59m_26s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_34_59m_26s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_34.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 3566.1
+        },
+        {
+            "filename": "./yt_3014722f_Standing_35_1h_00m_48s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_35_1h_00m_48s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_35.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 3648.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_36_1h_02m_24s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_36_1h_02m_24s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_36.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 3744.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_37_1h_04m_00s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_37_1h_04m_00s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_37.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 3840.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_38_1h_05m_36s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_38_1h_05m_36s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_38.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 3936.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_39_1h_07m_12s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_39_1h_07m_12s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_39.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 4032.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_40_1h_08m_48s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_40_1h_08m_48s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_40.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 4128.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_41_1h_10m_24s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_41_1h_10m_24s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_41.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 4224.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_42_1h_13m_23s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_42_1h_13m_23s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_42.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 4403.7
+        },
+        {
+            "filename": "./yt_3014722f_Standing_43_1h_15m_12s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_43_1h_15m_12s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_43.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 4512.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_44_1h_16m_48s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_44_1h_16m_48s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_44.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 4608.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_45_1h_18m_24s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_45_1h_18m_24s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_45.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 4704.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_46_1h_20m_00s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_46_1h_20m_00s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_46.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 4800.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_47_1h_21m_36s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_47_1h_21m_36s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_47.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 4896.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_48_1h_23m_12s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_48_1h_23m_12s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_48.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 4992.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_49_1h_24m_50s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_49_1h_24m_50s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_49.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 5090.8
+        },
+        {
+            "filename": "./yt_3014722f_Standing_50_1h_26m_24s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_50_1h_26m_24s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_50.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 5184.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_51_1h_29m_36s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_51_1h_29m_36s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_51.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 5376.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_52_1h_29m_46s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_52_1h_29m_46s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_52.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 5386.3
+        },
+        {
+            "filename": "./yt_3014722f_Standing_53_1h_31m_12s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_53_1h_31m_12s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_53.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 5472.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_54_1h_32m_48s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_54_1h_32m_48s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_54.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 5568.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_55_1h_34m_24s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_55_1h_34m_24s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_55.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 5664.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_56_1h_36m_00s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_56_1h_36m_00s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_56.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 5760.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_57_1h_37m_38s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_57_1h_37m_38s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_57.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 5858.8
+        },
+        {
+            "filename": "./yt_3014722f_Standing_58_1h_39m_12s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_58_1h_39m_12s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_58.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 5952.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_59_1h_40m_48s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_59_1h_40m_48s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_59.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 6048.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_60_1h_42m_24s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_60_1h_42m_24s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_60.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 6144.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_61_1h_44m_00s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_61_1h_44m_00s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_61.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 6240.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_62_1h_45m_36s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_62_1h_45m_36s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_62.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 6336.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_63_1h_47m_12s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_63_1h_47m_12s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_63.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 6432.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_64_1h_48m_48s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_64_1h_48m_48s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_64.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 6528.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_65_1h_50m_24s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_65_1h_50m_24s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_65.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 6624.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_66_1h_52m_01s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_66_1h_52m_01s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_66.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 6721.8
+        },
+        {
+            "filename": "./yt_3014722f_Standing_67_1h_53m_36s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_67_1h_53m_36s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_67.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 6816.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_68_1h_55m_12s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_68_1h_55m_12s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_68.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 6912.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_69_1h_57m_26s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_69_1h_57m_26s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_69.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 7046.2
+        },
+        {
+            "filename": "./yt_3014722f_Standing_70_1h_58m_24s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_70_1h_58m_24s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_70.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 7104.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_71_2h_00m_00s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_71_2h_00m_00s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_71.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 7200.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_72_2h_01m_36s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_72_2h_01m_36s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_72.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 7296.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_73_2h_03m_16s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_73_2h_03m_16s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_73.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 7396.5
+        },
+        {
+            "filename": "./yt_3014722f_Standing_74_2h_04m_48s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_74_2h_04m_48s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_74.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 7488.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_75_2h_06m_24s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_75_2h_06m_24s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_75.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 7584.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_76_2h_08m_00s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_76_2h_08m_00s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_76.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 7680.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_77_2h_09m_36s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_77_2h_09m_36s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_77.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 7776.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_78_2h_11m_12s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_78_2h_11m_12s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_78.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 7872.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_79_2h_12m_48s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_79_2h_12m_48s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_79.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 7968.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_80_2h_14m_24s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_80_2h_14m_24s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_80.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 8064.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_81_2h_16m_06s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_81_2h_16m_06s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_81.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 8166.2
+        },
+        {
+            "filename": "./yt_3014722f_Standing_82_2h_17m_36s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_82_2h_17m_36s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_82.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 8256.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_83_2h_19m_12s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_83_2h_19m_12s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_83.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 8352.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_84_2h_20m_48s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_84_2h_20m_48s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_84.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 8448.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_85_2h_22m_24s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_85_2h_22m_24s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_85.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 8544.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_86_2h_24m_00s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_86_2h_24m_00s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_86.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 8640.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_87_2h_25m_36s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_87_2h_25m_36s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_87.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 8736.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_88_2h_27m_12s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_88_2h_27m_12s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_88.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 8832.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_89_2h_28m_48s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_89_2h_28m_48s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_89.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 8928.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_90_2h_31m_04s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_90_2h_31m_04s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_90.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 9064.4
+        },
+        {
+            "filename": "./yt_3014722f_Standing_91_2h_32m_00s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_91_2h_32m_00s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_91.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 9120.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_92_2h_33m_36s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_92_2h_33m_36s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_92.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 9216.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_93_2h_35m_20s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_93_2h_35m_20s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_93.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 9320.4
+        },
+        {
+            "filename": "./yt_3014722f_Standing_94_2h_36m_48s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_94_2h_36m_48s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_94.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 9408.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_95_2h_38m_24s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_95_2h_38m_24s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_95.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 9504.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_96_2h_40m_00s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_96_2h_40m_00s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_96.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 9600.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_97_2h_41m_36s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_97_2h_41m_36s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_97.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 9696.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_98_2h_43m_12s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_98_2h_43m_12s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_98.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 9792.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_99_2h_44m_48s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_99_2h_44m_48s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_99.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 9888.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_100_2h_46m_31s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_100_2h_46m_31s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_100.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 9991.8
+        },
+        {
+            "filename": "./yt_3014722f_Standing_101_2h_48m_00s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_101_2h_48m_00s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_101.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 10080.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_102_2h_49m_36s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_102_2h_49m_36s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_102.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 10176.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_103_2h_51m_12s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_103_2h_51m_12s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_103.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 10272.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_104_2h_52m_48s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_104_2h_52m_48s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_104.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 10368.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_105_2h_54m_24s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_105_2h_54m_24s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_105.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 10464.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_106_2h_56m_00s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_106_2h_56m_00s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_106.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 10560.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_107_2h_57m_36s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_107_2h_57m_36s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_107.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 10656.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_108_2h_59m_12s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_108_2h_59m_12s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_108.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 10752.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_109_3h_00m_48s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_109_3h_00m_48s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_109.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 10848.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_110_3h_02m_24s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_110_3h_02m_24s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_110.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 10944.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_111_3h_04m_00s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_111_3h_04m_00s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_111.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 11040.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_112_3h_05m_36s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_112_3h_05m_36s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_112.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 11136.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_113_3h_07m_12s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_113_3h_07m_12s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_113.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 11232.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_114_3h_08m_48s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_114_3h_08m_48s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_114.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 11328.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_115_3h_10m_24s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_115_3h_10m_24s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_115.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 11424.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_116_3h_12m_00s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_116_3h_12m_00s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_116.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 11520.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_117_3h_13m_36s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_117_3h_13m_36s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_117.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 11616.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_118_3h_15m_12s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_118_3h_15m_12s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_118.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 11712.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_119_3h_16m_51s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_119_3h_16m_51s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_119.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 11811.1
+        },
+        {
+            "filename": "./yt_3014722f_Standing_120_3h_20m_00s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_120_3h_20m_00s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_120.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 12000.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_121_3h_21m_36s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_121_3h_21m_36s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_121.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 12096.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_122_3h_23m_14s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_122_3h_23m_14s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_122.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 12194.7
+        },
+        {
+            "filename": "./yt_3014722f_Standing_123_3h_24m_48s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_123_3h_24m_48s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_123.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 12288.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_124_3h_26m_24s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_124_3h_26m_24s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_124.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 12384.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_125_3h_29m_36s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_125_3h_29m_36s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_125.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 12576.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_126_3h_31m_12s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_126_3h_31m_12s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_126.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 12672.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_127_3h_32m_48s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_127_3h_32m_48s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_127.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 12768.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_128_3h_34m_24s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_128_3h_34m_24s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_128.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 12864.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_129_3h_36m_00s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_129_3h_36m_00s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_129.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 12960.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_130_3h_37m_59s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_130_3h_37m_59s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_130.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 13079.3
+        },
+        {
+            "filename": "./yt_3014722f_Standing_131_3h_39m_12s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_131_3h_39m_12s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_131.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 13152.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_132_3h_40m_48s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_132_3h_40m_48s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_132.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 13248.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_133_3h_44m_00s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_133_3h_44m_00s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_133.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 13440.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_134_3h_45m_36s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_134_3h_45m_36s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_134.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 13536.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_135_3h_47m_12s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_135_3h_47m_12s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_135.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 13632.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_136_3h_50m_24s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_136_3h_50m_24s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_136.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 13824.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_137_3h_52m_00s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_137_3h_52m_00s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_137.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 13920.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_138_3h_53m_51s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_138_3h_53m_51s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_138.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 14032.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_139_3h_55m_12s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_139_3h_55m_12s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_139.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 14112.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_140_3h_58m_24s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_140_3h_58m_24s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_140.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 14304.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_141_4h_00m_00s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_141_4h_00m_00s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_141.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 14400.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_142_4h_01m_36s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_142_4h_01m_36s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_142.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 14496.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_143_4h_03m_12s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_143_4h_03m_12s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_143.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 14592.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_144_4h_04m_51s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_144_4h_04m_51s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_144.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 14691.7
+        },
+        {
+            "filename": "./yt_3014722f_Standing_145_4h_06m_24s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_145_4h_06m_24s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_145.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 14784.0
+        },
+        {
+            "filename": "./yt_3014722f_Standing_146_4h_08m_00s_RealSpeed.mp4",
+            "slow_mo_filename": "./yt_3014722f_Event_146_4h_08m_00s_SlowMo.mp4",
+            "tensor_filename": "./dataset/raw_clips/tensor_yt_3014722f_event_146.mp4",
+            "phases_detected": [],
+            "match_timestamp_sec": 14880.0
         }
     ]
 }

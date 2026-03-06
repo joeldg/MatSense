@@ -17,12 +17,14 @@ def test_full_grappling_pipeline_execution(test_video_path, test_output_dir):
     except Exception as e:
         pytest.fail(f"Pipeline crashed during execution: {e}")
         
-    # Verify the global Match Report JSON was generated
-    report_path = os.path.join(test_output_dir, "master_match_report.json")
-    assert os.path.exists(report_path), "Master Match Report JSON was not generated."
+    # Verify the global Match Report JSON was generated (now in per-video subdir)
+    video_basename = os.path.splitext(os.path.basename(test_video_path))[0]
+    video_dir = os.path.join(test_output_dir, video_basename)
+    report_path = os.path.join(video_dir, "master_match_report.json")
+    assert os.path.exists(report_path), f"Master Match Report JSON was not generated at {report_path}."
     
     # Verify that the Data Harvester successfully extracted 224x224 tensors
-    harvester_dir = os.path.join(test_output_dir, "dataset", "raw_clips")
+    harvester_dir = os.path.join(video_dir, "dataset", "raw_clips")
     assert os.path.exists(harvester_dir), "Data Harvester directory was not built."
     
     harvested_files = [f for f in os.listdir(harvester_dir) if f.endswith(".mp4")]

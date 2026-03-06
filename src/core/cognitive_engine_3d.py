@@ -37,7 +37,7 @@ class WHAMCognitiveEngine:
             total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             if total_frames <= 0: total_frames = 60
             cap.release()
-            return torch.randn((total_frames, 24, 3)).to(self.device)
+            return torch.randn((total_frames, 23, 3)).to(self.device)
 
         import sys
         

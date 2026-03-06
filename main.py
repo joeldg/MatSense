@@ -17,12 +17,14 @@ def main():
     # 1. Analyze Command
     analyze_parser = subparsers.add_parser("analyze", help="Run full pipeline on a local file, direct URL, or YouTube link.")
     analyze_parser.add_argument("-i", "--input", required=True, help="Path to local video or a URL/YouTube link.")
-    analyze_parser.add_argument("-o", "--output", default=".", help="Directory to save output files.")
+    analyze_parser.add_argument("-o", "--output", default="./output", help="Directory to save output files.")
+    analyze_parser.add_argument("--mojo", action="store_true", default=False, help="Use Mojo-accelerated compute kernels (requires mojo).")
 
     # 2. Trim Command
     trim_parser = subparsers.add_parser("trim", help="Quickly find and extract takedowns from a long video.")
     trim_parser.add_argument("-i", "--input", required=True, help="Path to local video or a URL/YouTube link.")
     trim_parser.add_argument("-o", "--output", default=".", help="Directory to save highlight clips.")
+    trim_parser.add_argument("--mojo", action="store_true", default=False, help="Use Mojo-accelerated compute kernels (requires mojo).")
 
     # 3. Classify Command
     classify_parser = subparsers.add_parser("classify", help="Run the VideoMAE Cognitive Engine to classify a takedown clip.")
@@ -61,10 +63,11 @@ def main():
 
     if args.command == "analyze":
         output_dir = args.output
+        use_mojo = getattr(args, 'mojo', False)
         if not os.path.exists(output_dir): os.makedirs(output_dir)
         try:
             video_path = fetcher.get_video_path(args.input)
-            pipeline = GrapplingPipeline()
+            pipeline = GrapplingPipeline(use_mojo=use_mojo)
             pipeline.analyze_match(video_path, output_dir=output_dir)
         except Exception as e:
             print(f"❌ Error during analysis: {e}")
@@ -77,9 +80,11 @@ def main():
             # Temporarily cd into output dir so auto_trimmer dumps highlights there
             og_dir = os.getcwd()
             os.chdir(output_dir)
-            impacts, video_fps = find_all_takedowns(video_path)
-            trim_all_highlights(video_path, impacts, video_fps)
-            os.chdir(og_dir)
+            try:
+                impacts, video_fps = find_all_takedowns(video_path)
+                trim_all_highlights(video_path, impacts, video_fps)
+            finally:
+                os.chdir(og_dir)
             print("✅ Trimming complete!")
         except Exception as e:
             print(f"❌ Error during trimming: {e}")

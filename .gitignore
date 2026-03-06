@@ -36,6 +36,7 @@ venv.bak/
 tmp_downloads/
 tmp/
 temp/
+output/
 
 # Ultralytics & Model Weights
 runs/
