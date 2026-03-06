@@ -44,6 +44,8 @@ class VideoFetcher:
                 'noplaylist': True,
                 'quiet': True,
                 'no_warnings': True,
+                # Use android/ios clients to bypass YouTube's web client 403 blocks
+                'extractor_args': {'youtube': {'player_client': ['android', 'ios', 'web']}},
             }
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
