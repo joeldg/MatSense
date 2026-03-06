@@ -1,6 +1,5 @@
 import os
-from pytubefix import YouTube
-from pytubefix.cli import on_progress
+import subprocess
 import uuid
 import requests
 from urllib.parse import urlparse
@@ -10,6 +9,7 @@ class VideoFetcher:
     """
     Handles ingesting video from local paths, direct URLs, or YouTube links.
     Downloads remote videos to a temporary directory.
+    Uses yt-dlp (preferred) or pytubefix as fallback.
     """
     def __init__(self, temp_dir=TEMP_DIR):
         self.temp_dir = temp_dir
@@ -29,33 +29,46 @@ class VideoFetcher:
 
     def download_youtube(self, url: str) -> str:
         unique_id = str(uuid.uuid4())[:8]
+        final_filename = f"yt_{unique_id}.mp4"
+        final_path = os.path.join(self.temp_dir, final_filename)
         
         print(f"📥 Downloading YouTube video from {url}...")
+        
+        # Try yt-dlp first (most reliable, actively maintained)
         try:
-            # Use WEB client to bypass the po_token manual prompt
-            yt = YouTube(url, client='WEB', on_progress_callback=on_progress)
+            result = subprocess.run([
+                "yt-dlp",
+                "-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+                "--merge-output-format", "mp4",
+                "-o", final_path,
+                "--no-playlist",
+                "--quiet", "--progress",
+                url
+            ], capture_output=True, text=True, timeout=600)
             
-            # Auto-fetch title
-            video_title = yt.title
-            
-            # Get highest resolution mp4 stream
-            stream = yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution').desc().first()
-            if not stream:
-                stream = yt.streams.filter(file_extension='mp4').first()
+            if result.returncode == 0 and os.path.exists(final_path):
+                print(f"✅ Downloaded (yt-dlp): {final_path}")
+                return final_path
+            else:
+                raise RuntimeError(f"yt-dlp failed: {result.stderr[:200]}")
                 
-            if not stream:
-                raise ValueError("No suitable MP4 stream found for this video.")
-            
-            final_filename = f"yt_{unique_id}.mp4"
-            final_path = os.path.join(self.temp_dir, final_filename)
-            
-            stream.download(output_path=self.temp_dir, filename=final_filename)
-            
-            print(f"✅ Downloaded: {video_title} to {final_path}")
-            return final_path
-            
-        except Exception as e:
-            raise RuntimeError(f"PyTubeFix Error 403 Bypass Failed: {e}")
+        except FileNotFoundError:
+            print("   ⚠️ yt-dlp not found, trying pytubefix fallback...")
+            # Fallback to pytubefix
+            try:
+                from pytubefix import YouTube
+                from pytubefix.cli import on_progress
+                yt = YouTube(url, client='WEB', on_progress_callback=on_progress)
+                stream = yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution').desc().first()
+                if not stream:
+                    stream = yt.streams.filter(file_extension='mp4').first()
+                if not stream:
+                    raise ValueError("No suitable MP4 stream found.")
+                stream.download(output_path=self.temp_dir, filename=final_filename)
+                print(f"✅ Downloaded (pytubefix): {final_path}")
+                return final_path
+            except Exception as e:
+                raise RuntimeError(f"YouTube download failed (both yt-dlp and pytubefix): {e}")
 
     def download_direct_url(self, url: str) -> str:
         unique_id = str(uuid.uuid4())[:8]
