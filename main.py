@@ -19,6 +19,7 @@ def main():
     analyze_parser.add_argument("-i", "--input", required=True, help="Path to local video or a URL/YouTube link.")
     analyze_parser.add_argument("-o", "--output", default="./output", help="Directory to save output files.")
     analyze_parser.add_argument("--mojo", action="store_true", default=False, help="Use Mojo-accelerated compute kernels (requires mojo).")
+    analyze_parser.add_argument("--cognitive", action="store_true", default=False, help="[EXPERIMENTAL] Run VideoMAE classification on output clips after analysis.")
 
     # 2. Trim Command
     trim_parser = subparsers.add_parser("trim", help="Quickly find and extract takedowns from a long video.")
@@ -64,11 +65,28 @@ def main():
     if args.command == "analyze":
         output_dir = args.output
         use_mojo = getattr(args, 'mojo', False)
+        use_cognitive = getattr(args, 'cognitive', False)
         if not os.path.exists(output_dir): os.makedirs(output_dir)
         try:
             video_path = fetcher.get_video_path(args.input)
             pipeline = GrapplingPipeline(use_mojo=use_mojo)
             pipeline.analyze_match(video_path, output_dir=output_dir)
+            
+            # [EXPERIMENTAL] Run VideoMAE cognitive classification on rendered clips
+            if use_cognitive:
+                print("\n🧠 [COGNITIVE] Running VideoMAE classification on output clips...")
+                try:
+                    from src.core.cognitive_engine import GrapplingCognitiveEngine
+                    import glob, json
+                    engine = GrapplingCognitiveEngine()
+                    video_basename = os.path.splitext(os.path.basename(video_path))[0]
+                    video_output_dir = os.path.join(output_dir, video_basename)
+                    clips = glob.glob(os.path.join(video_output_dir, "match_*_RealSpeed.mp4"))
+                    for clip in sorted(clips):
+                        result = engine.predict_technique(clip)
+                        print(f"   📊 {os.path.basename(clip)}: {json.dumps(result)}")
+                except Exception as cog_e:
+                    print(f"   ⚠️ Cognitive classification failed: {cog_e}")
         except Exception as e:
             print(f"❌ Error during analysis: {e}")
 

@@ -84,6 +84,29 @@ def is_camera_blocked(detections, h, w):
     
     return False
 
+def compute_z_depth_score(box, h):
+    """Compute faux-3D Z-depth score from 2D bounding box.
+    
+    Z-Depth = normalized_area * foot_y_normalized³
+    
+    MATHEMATICAL RATIONALE:
+    In broadcast video, camera perspective creates a natural depth cue:
+    - Objects closer to the camera appear BOTH larger AND lower in frame
+    - foot_y = bottom of bounding box = where feet touch the floor
+    - The CUBIC exponent on foot_y aggressively weights proximity:
+        y=0.9 (near camera) → 0.729, y=0.5 (mid-field) → 0.125 → 5.8x difference
+    - Multiplying by area adds a second depth cue (larger = closer)
+    - This 2D→3D projection is cheap but effective for filtering background matches
+    
+    Returns: float score in range [0, 1]. Higher = closer to camera.
+    """
+    bw = box[2] - box[0]
+    bh = box[3] - box[1]
+    area_norm = (bw * bh) / (h * h)  # Normalize by frame height² for scale invariance
+    foot_y_norm = box[3] / h          # Bottom of box = foot position, normalized [0,1]
+    return area_norm * (foot_y_norm ** 3)
+
+
 def bb_iou(boxA, boxB):
     xA, yA = max(boxA[0], boxB[0]), max(boxA[1], boxB[1])
     xB, yB = min(boxA[2], boxB[2]), min(boxA[3], boxB[3])
@@ -223,13 +246,37 @@ class MatchTracker:
 
 
     def find_foreground_anchor(self, raw_data, w, h, fps):
+        """PHASE 2a: Find the two foreground athletes using Z-depth scoring and the Opening Bell Signature.
+        
+        THE OPENING BELL SIGNATURE:
+        In competitive grappling, matches begin with a ritualized sequence:
+        1. Athletes start on opposite sides (L/R of X-axis)
+        2. They step toward each other (centroids converge)
+        3. They bow/handshake/grip (bounding boxes intersect)
+        
+        We scan the first 15 seconds for this geometry. The last frame where they're
+        still separated becomes the anchor (cleanest visual for histogram locking).
+        """
         print("\n🔍 [PHASE 2a] ENGAGEMENT MATRIX: Isolating Absolute Foreground Athletes...")
         search_frames = min(int(fps * 15), len(raw_data))
         
         pair_stats = defaultdict(list)
+        # Track per-entity Z-depth EMA for foreground supremacy filtering
+        z_depth_ema = defaultdict(float)  # id -> smoothed Z-depth
+        Z_ALPHA = 0.85  # EMA decay: α=0.85 means ~3s half-life at 30fps — smooths jitter, keeps fast transitions
         
         for f in range(search_frames):
             dets = raw_data.get(f, [])
+            
+            # Update per-entity Z-depth EMA
+            for d in dets:
+                z_score = compute_z_depth_score(d['box'], h)
+                tid = d['id']
+                if tid in z_depth_ema:
+                    z_depth_ema[tid] = Z_ALPHA * z_depth_ema[tid] + (1.0 - Z_ALPHA) * z_score
+                else:
+                    z_depth_ema[tid] = z_score
+            
             if len(dets) < 2: continue
             for i in range(len(dets)):
                 for j in range(i+1, len(dets)):
@@ -251,26 +298,28 @@ class MatchTracker:
                         overlap_x = max(0, min(b1[2], b2[2]) - max(b1[0], b2[0]))
                         overlap_y = max(0, min(b1[3], b2[3]) - max(b1[1], b2[1]))
                         
-                        # 1. DEPTH HEURISTIC: Use MIN depth instead of MAX so BOTH feet must be close to camera
-                        fg_y = min(b1[3], b2[3]) / h
+                        # Z-DEPTH HEURISTIC: Use the faux-3D Z-depth score
+                        # Combined depth = minimum of both athletes' Z-depth EMA
+                        # Both must be in the foreground to score high
+                        z1 = z_depth_ema.get(dets[i]['id'], 0)
+                        z2 = z_depth_ema.get(dets[j]['id'], 0)
+                        depth_score = min(z1, z2)
                         
-                        # 2. SIZE HEURISTIC: Prefer larger objects slightly, but prioritize centering
                         size_h = max(h1, h2) / h
-                        
-                        # 3. CENTER HEURISTIC: Heavily prioritize pairs interacting near the center of the frame
                         center = 1.0 - (abs(((cx1+cx2)/2) - w/2) / (w/2))
                         
-                        # 4. ASPECT RATIO PENALTY: Referees are usually tall/skinny (<0.5 aspect). Grapplers are wider.
+                        # ASPECT RATIO: Refs are tall/skinny (AR < 0.6). Grapplers are wider.
                         aspect1 = (b1[2]-b1[0]) / (h1 + 1e-5)
                         aspect2 = (b2[2]-b2[0]) / (h2 + 1e-5)
                         ref_penalty = -50.0 if (aspect1 < 0.6 or aspect2 < 0.6) else 0.0
                         
-                        # 5. LEFT/RIGHT APPROACH: Players typically come from opposite sides
-                        # Bonus when one is left-of-center and other is right-of-center
+                        # LEFT/RIGHT APPROACH: Players typically come from opposite sides
                         mid_x = w / 2.0
                         lr_bonus = 25.0 if (cx1 < mid_x and cx2 > mid_x) or (cx1 > mid_x and cx2 < mid_x) else 0.0
                         
-                        score = (fg_y ** 3) * 75.0 + (size_h ** 2) * 15.0 + (center * 75.0) + ref_penalty + lr_bonus
+                        # Combined score: Z-depth replaces the old fg_y heuristic
+                        # depth_score is in [0,1], cubed weighting already baked in
+                        score = (depth_score * 150.0) + (size_h ** 2) * 15.0 + (center * 75.0) + ref_penalty + lr_bonus
                         if overlap_x * overlap_y > 0:
                             score += 15.0
                     
@@ -287,7 +336,6 @@ class MatchTracker:
         
         for pid, scores in pair_stats.items():
             if len(scores) < int(fps * 0.5): continue
-            
             med_score = np.median(scores)
             if med_score > best_med_score:
                 best_med_score = med_score
@@ -297,59 +345,135 @@ class MatchTracker:
             best_pair_id = max(pair_stats.keys(), key=lambda k: np.median(pair_stats[k]))
             
         id_A, id_B = best_pair_id
-        print(f"   🎯 Foreground Athletes Verified: IDs {id_A} & {id_B}")
         
-        best_anchor = None
-        lowest_overlap = float('inf')
-        best_score = -float('inf')
-        
+        # =====================================================================
+        # OPENING BELL SIGNATURE: Detect approach→converge pattern
+        # Scan for the sequence: separated → approaching → contact (bow/grip)
+        # Lock Athlete_1 = leftmost starting position, Athlete_2 = rightmost
+        # =====================================================================
+        approach_frames = []  # (frame, d1, d2, centroid_dist, iou)
         for f in range(search_frames):
             dets = raw_data.get(f, [])
             d1 = next((d for d in dets if d['id'] == id_A), None)
             d2 = next((d for d in dets if d['id'] == id_B), None)
-            
             if d1 and d2:
                 b1, b2 = d1['box'], d2['box']
+                cx1 = (b1[0] + b1[2]) / 2.0
+                cx2 = (b2[0] + b2[2]) / 2.0
+                dist = abs(cx1 - cx2)
+                iou = bb_iou(b1, b2)
+                approach_frames.append((f, d1, d2, dist, iou, cx1, cx2))
+        
+        # Look for the approach→converge pattern
+        # Phase 1: Find frames where athletes are separated (dist > 30% frame width)
+        # Phase 2: Distance decreases over subsequent frames
+        # Phase 3: Boxes intersect (iou > 0.05) = bow/handshake/grip
+        best_anchor = None
+        best_anchor_score = -float('inf')
+        converge_detected = False
+        
+        if len(approach_frames) >= int(fps * 1.0):  # Need at least 1 second of data
+            # Find the convergence point (first sustained contact)
+            for idx in range(len(approach_frames)):
+                _, _, _, dist, iou, _, _ = approach_frames[idx]
+                if iou > 0.05 and dist < w * 0.15:
+                    # Found first contact — look backwards for the separated state
+                    for back_idx in range(max(0, idx - int(fps * 5)), idx):
+                        _, d1_back, d2_back, back_dist, back_iou, cx1_b, cx2_b = approach_frames[back_idx]
+                        if back_dist > w * 0.20 and back_iou < 0.01:
+                            # This is a clean separation frame — ideal anchor
+                            b1_b, b2_b = d1_back['box'], d2_back['box']
+                            fg_score = max(b1_b[3], b2_b[3]) / h
+                            center_score = 1.0 - (abs(((b1_b[0]+b1_b[2]+b2_b[0]+b2_b[2])/4) - w/2) / (w/2))
+                            score = fg_score + center_score
+                            if score > best_anchor_score:
+                                best_anchor_score = score
+                                # Lock Athlete_1 = left, Athlete_2 = right
+                                if cx1_b <= cx2_b:
+                                    best_anchor = {'f': approach_frames[back_idx][0], 'p1': d1_back, 'p2': d2_back}
+                                else:
+                                    best_anchor = {'f': approach_frames[back_idx][0], 'p1': d2_back, 'p2': d1_back}
+                                converge_detected = True
+                    if converge_detected:
+                        break
+        
+        if converge_detected:
+            print(f"   🔔 OPENING BELL DETECTED: Approach→Converge at frame {best_anchor['f']}")
+            print(f"   🎯 Athlete_1 (Left): ID {best_anchor['p1']['id']} | Athlete_2 (Right): ID {best_anchor['p2']['id']}")
+        else:
+            # Fallback: find the cleanest separation frame
+            print(f"   🎯 Foreground Athletes Verified: IDs {id_A} & {id_B}")
+            lowest_overlap = float('inf')
+            
+            for f, d1, d2, dist, iou, cx1, cx2 in approach_frames:
+                b1, b2 = d1['box'], d2['box']
                 overlap_area = max(0, min(b1[2], b2[2]) - max(b1[0], b2[0])) * max(0, min(b1[3], b2[3]) - max(b1[1], b2[1]))
-                
                 fg_score = max(b1[3], b2[3]) / h
                 score = fg_score + (1.0 - (abs(((b1[0]+b1[2]+b2[0]+b2[2])/4) - w/2) / (w/2)))
                 
                 if overlap_area == 0:
                     if lowest_overlap > 0: 
                         lowest_overlap = 0
-                        best_score = score
-                        best_anchor = {'f': f, 'p1': d1, 'p2': d2}
-                    elif score > best_score: 
-                        best_score = score
-                        best_anchor = {'f': f, 'p1': d1, 'p2': d2}
+                        best_anchor_score = score
+                        # Lock L/R by initial X position
+                        if cx1 <= cx2:
+                            best_anchor = {'f': f, 'p1': d1, 'p2': d2}
+                        else:
+                            best_anchor = {'f': f, 'p1': d2, 'p2': d1}
+                    elif score > best_anchor_score: 
+                        best_anchor_score = score
+                        if cx1 <= cx2:
+                            best_anchor = {'f': f, 'p1': d1, 'p2': d2}
+                        else:
+                            best_anchor = {'f': f, 'p1': d2, 'p2': d1}
                 elif lowest_overlap > 0 and overlap_area < lowest_overlap:
                     lowest_overlap = overlap_area
-                    best_score = score
-                    best_anchor = {'f': f, 'p1': d1, 'p2': d2}
+                    best_anchor_score = score
+                    if cx1 <= cx2:
+                        best_anchor = {'f': f, 'p1': d1, 'p2': d2}
+                    else:
+                        best_anchor = {'f': f, 'p1': d2, 'p2': d1}
                     
         if not best_anchor:
-            print("   ⚠️ No pure separation frame found. Defaulting to highest foreground state.")
-            best_score = -float('inf')
-            for f in range(search_frames):
-                dets = raw_data.get(f, [])
-                d1 = next((d for d in dets if d['id'] == id_A), None)
-                d2 = next((d for d in dets if d['id'] == id_B), None)
-                if d1 and d2:
-                    b1, b2 = d1['box'], d2['box']
-                    fg_score = max(b1[3], b2[3]) / h
-                    if fg_score > best_score:
-                        best_score = fg_score
+            print("   ⚠️ No separation frame found. Defaulting to highest foreground state.")
+            best_anchor_score = -float('inf')
+            for data in approach_frames:
+                f, d1, d2, dist, iou, cx1, cx2 = data
+                b1, b2 = d1['box'], d2['box']
+                fg_score = max(b1[3], b2[3]) / h
+                if fg_score > best_anchor_score:
+                    best_anchor_score = fg_score
+                    if cx1 <= cx2:
                         best_anchor = {'f': f, 'p1': d1, 'p2': d2}
+                    else:
+                        best_anchor = {'f': f, 'p1': d2, 'p2': d1}
                         
         return best_anchor
 
     def build_global_blacklist(self, raw_data, anchor, w, h, fps):
+        """SENTINEL REF CLASSIFIER: Behavioral profiling to classify and blacklist referees.
+        
+        Uses 5 independent signals to identify the referee:
+        1. POSTURE (standing_pct): Refs maintain vertical AR (height > width) >60% of the time
+        2. KINEMATICS (head_stability): Refs have stable head altitude (σ < 30px)
+           Athletes experience 200-400px Y-drops during takedowns.
+           WHY σ<30px: At 1080p, 30px ≈ 2.8% of frame height — normal head-bob while walking.
+        3. ORBIT (orbit_radius): Refs maintain safe buffer distance from athletes' center-of-gravity
+           WHY 1.5x: Refs must be close enough to intervene but far enough to not interfere.
+        4. MAX ASPECT RATIO: If max AR across all frames < 0.85, the entity never goes horizontal = ref.
+           Athletes go horizontal (AR > 1.2) during takedowns/groundwork.
+        5. BETWEEN-RATIO + BW-SCORE: Legacy signals — refs start between players, wear dark clothing.
+        """
         print("🔍 [PHASE 2b] BEHAVIORAL PRE-SCAN: Executing Spatial & Spectral Referee Matrix...")
-        global_stats = defaultdict(lambda: {'boxes': [], 'between_frames': 0, 'interact_frames': 0, 'bw_scores': []})
+        global_stats = defaultdict(lambda: {
+            'boxes': [], 'between_frames': 0, 'interact_frames': 0, 
+            'bw_scores': [], 'head_ys': [], 'kpts_available': False
+        })
 
         start_match_frames = anchor['f'] + int(fps * 8.0)
         early_frames_counted = 0
+        # Track athletes' combined center-of-gravity for orbit calculation
+        athlete_cog_positions = []  # [(cog_x, cog_y), ...]
 
         for f, dets in raw_data.items():
             p1_cand, p2_cand = None, None
@@ -358,12 +482,24 @@ class MatchTracker:
                 global_stats[tid]['boxes'].append(d['box'])
                 if d.get('bw_score'): global_stats[tid]['bw_scores'].append(d['bw_score'])
                 
+                # HEAD-ALTITUDE: Extract head keypoint Y if available (keypoint 0 = nose)
+                kpt = d.get('kpt')
+                if kpt is not None and hasattr(kpt, '__len__') and len(kpt) > 0:
+                    nose_y = float(kpt[0][1]) if kpt[0][2] > 0.3 else None  # Only if confidence > 0.3
+                    if nose_y is not None:
+                        global_stats[tid]['head_ys'].append(nose_y)
+                        global_stats[tid]['kpts_available'] = True
+                
                 if tid == anchor['p1']['id']: p1_cand = d['box']
                 if tid == anchor['p2']['id']: p2_cand = d['box']
                 
             if p1_cand is not None and p2_cand is not None:
                 c1x = (p1_cand[0] + p1_cand[2]) / 2.0
+                c1y = (p1_cand[1] + p1_cand[3]) / 2.0
                 c2x = (p2_cand[0] + p2_cand[2]) / 2.0
+                c2y = (p2_cand[1] + p2_cand[3]) / 2.0
+                
+                athlete_cog_positions.append(((c1x + c2x) / 2.0, (c1y + c2y) / 2.0))
                 
                 left_bound = min(c1x, c2x) - (w * 0.10)
                 right_bound = max(c1x, c2x) + (w * 0.10)
@@ -392,6 +528,12 @@ class MatchTracker:
                 anchor_h = max(anchor_h, np.percentile(boxes[:, 3] - boxes[:, 1], 80))
                 anchor_y = max(anchor_y, np.median(boxes[:, 3]))
 
+        # Pre-compute median athlete COG for orbit-radius
+        med_cog_x, med_cog_y = w / 2.0, h / 2.0
+        if athlete_cog_positions:
+            cogs = np.array(athlete_cog_positions)
+            med_cog_x, med_cog_y = np.median(cogs[:, 0]), np.median(cogs[:, 1])
+
         true_coach_id = None
         bg_ids, spec_ids = set(), set()
         ref_candidates = []
@@ -410,24 +552,63 @@ class MatchTracker:
             interaction_rate = stats['interact_frames'] / float(max(1, len(boxes)))
             avg_bw = np.median(stats['bw_scores']) if stats['bw_scores'] else 0.0
             
+            # Z-DEPTH FILTER: entities consistently in far background → bg
             if med_y < anchor_y - (anchor_h * 0.45):
                 bg_ids.add(tid); continue
+            
+            # ── NEW SIGNAL 1: HEAD-ALTITUDE STABILITY ──
+            # Refs maintain a steady head height. Athletes drop 200-400px during takedowns.
+            # σ < 30px at 1080p ≈ 2.8% of frame height = normal head-bob
+            head_stability_score = 0.0
+            if stats['head_ys'] and len(stats['head_ys']) > 10:
+                head_std = np.std(stats['head_ys'])
+                # Normalize to frame height for resolution independence
+                head_std_norm = head_std / h
+                if head_std_norm < 0.028:  # σ < 2.8% of frame height
+                    head_stability_score = 30.0  # Strong ref signal
+                elif head_std_norm < 0.05:
+                    head_stability_score = 15.0  # Moderate ref signal
+            
+            # ── NEW SIGNAL 2: ORBIT-RADIUS ──
+            # Refs maintain a safe buffer distance from athletes' combined center-of-gravity
+            centroids_x = (boxes[:, 0] + boxes[:, 2]) / 2.0
+            centroids_y = (boxes[:, 1] + boxes[:, 3]) / 2.0
+            dists_to_cog = np.sqrt((centroids_x - med_cog_x)**2 + (centroids_y - med_cog_y)**2)
+            med_orbit = np.median(dists_to_cog)
+            # Refs orbit at ~1.5-3x the athlete group radius
+            orbit_score = 10.0 if (anchor_h * 0.8 < med_orbit < anchor_h * 3.5) else 0.0
+            
+            # ── NEW SIGNAL 3: MAX ASPECT RATIO ──
+            # If the entity NEVER goes horizontal (max AR < 0.85), it's a strong ref signal
+            # Athletes go horizontal (AR > 1.2) during takedowns/groundwork
+            max_ar = np.max(aspect_ratios)
+            max_ar_score = 15.0 if max_ar < 0.85 else 0.0
                 
             is_upright = standing_pct > 0.60
             is_non_interactive = interaction_rate < 0.35
             
-            # The Referee is usually standing, rarely interacts, and starts between the players
+            # Combined ref scoring: all 5 signals
             if is_upright and is_non_interactive:
-                ref_score = (between_ratio * 50.0) + (avg_bw * 50.0)
-                ref_candidates.append({'id': tid, 'score': ref_score, 'bw': avg_bw, 'ratio': between_ratio})
+                ref_score = (
+                    (between_ratio * 30.0) +   # Legacy: starts between players
+                    (avg_bw * 30.0) +           # Legacy: dark clothing
+                    head_stability_score +       # NEW: steady head altitude
+                    orbit_score +                # NEW: stable orbit around action
+                    max_ar_score                 # NEW: never goes horizontal
+                )
+                ref_candidates.append({
+                    'id': tid, 'score': ref_score, 'bw': avg_bw, 
+                    'ratio': between_ratio, 'head_σ': np.std(stats['head_ys']) if stats['head_ys'] else -1,
+                    'orbit': med_orbit, 'max_ar': max_ar
+                })
             else:
                 spec_ids.add(tid)
 
         if ref_candidates:
-            # Rank strictly by the newly calculated ref_score
             ref_candidates.sort(key=lambda x: x['score'], reverse=True)
             true_coach_id = ref_candidates[0]['id']
-            print(f"   👔 TRUE REF/COACH SECURED: ID {true_coach_id} (Sat-Score: {ref_candidates[0]['bw']:.2f}, Between-Ratio: {ref_candidates[0]['ratio']:.2f})")
+            rc = ref_candidates[0]
+            print(f"   👔 IGNORE_REF SECURED: ID {true_coach_id} | BW:{rc['bw']:.2f} Between:{rc['ratio']:.2f} Head-σ:{rc['head_σ']:.1f}px Orbit:{rc['orbit']:.0f}px MaxAR:{rc['max_ar']:.2f}")
             for cand in ref_candidates[1:]: spec_ids.add(cand['id'])
                 
         return true_coach_id, spec_ids, bg_ids
@@ -549,14 +730,46 @@ class MatchTracker:
             current_overlap = 0.0
             if not melded and p1_det and p2_det:
                 current_overlap = bb_iou(p1_det['box'], p2_det['box'])
+            
+            # ── THE ECLIPSE: Referee occlusion handling ──
+            # If the referee walks in front (higher Z-depth than athletes), freeze profiles.
+            # This prevents the ref's visual features from contaminating athlete profiles.
+            ref_eclipse = False
+            if ref:
+                for r in ref:
+                    ref_z = compute_z_depth_score(r['box'], h)
+                    p1_z = compute_z_depth_score(p1_prof['box'], h) if p1_det else 0
+                    p2_z = compute_z_depth_score(p2_prof['box'], h) if p2_det else 0
+                    ref_iou_p1 = bb_iou(r['box'], p1_prof['box']) if p1_det else 0
+                    ref_iou_p2 = bb_iou(r['box'], p2_prof['box']) if p2_det else 0
+                    # Eclipse condition: ref closer to camera AND overlapping an athlete
+                    # WHY IoU 0.3: Partial occlusion starts polluting features at 30%
+                    if ref_z > max(p1_z, p2_z) and (ref_iou_p1 > 0.3 or ref_iou_p2 > 0.3):
+                        ref_eclipse = True
+                        break
                 
             k1 = p1_det.get('kpt')
-            p1_prof.update({'box': p1_det['box'].copy(), 'id': p1_det['id'], 'kpt': k1.copy() if k1 is not None else None})
-            
             k2 = p2_det.get('kpt')
-            p2_prof.update({'box': p2_det['box'].copy(), 'id': p2_det['id'], 'kpt': k2.copy() if k2 is not None else None})
             
-            if not melded and current_overlap < 0.15:
+            # ── THE PRETZEL: Heavy overlap → freeze visual features ──
+            # WHY IoU > 0.60: At 60% overlap, bounding boxes are essentially one blob.
+            # Visual features (histograms) from torso crops will be contaminated by the
+            # other athlete's gi/skin. Freezing prevents color-bleed in profile memory.
+            # ALSO freeze during ref eclipse to prevent ref's features from bleeding in.
+            pretzel_state = current_overlap > 0.60
+            
+            if not ref_eclipse:  # Only update box/id if ref isn't eclipsing
+                p1_prof.update({'box': p1_det['box'].copy(), 'id': p1_det['id'], 'kpt': k1.copy() if k1 is not None else None})
+                p2_prof.update({'box': p2_det['box'].copy(), 'id': p2_det['id'], 'kpt': k2.copy() if k2 is not None else None})
+            else:
+                # Eclipse: hold position trajectories, don't update IDs
+                # Only update box position (for tracking continuity) but NOT histogram/color
+                p1_prof['kpt'] = k1.copy() if k1 is not None else p1_prof.get('kpt')
+                p2_prof['kpt'] = k2.copy() if k2 is not None else p2_prof.get('kpt')
+            
+            # Histogram update: ONLY when NOT in pretzel AND NOT in eclipse
+            # Old threshold was IoU < 0.15 — far too aggressive, froze updates during normal grappling
+            if not melded and not pretzel_state and not ref_eclipse:
                 if p1_det.get('hist') is not None and p1_prof.get('hist') is not None:
                     p1_prof['hist'] = cv2.addWeighted(p1_prof['hist'], 0.95, p1_det['hist'], 0.05, 0)
                 if p2_det.get('hist') is not None and p2_prof.get('hist') is not None:

@@ -428,6 +428,34 @@ fn update_skeleton_ema(args: PythonObject) raises -> PythonObject:
 
 
 # ==============================================================================
+# 7. COMPUTE_Z_DEPTH — Faux-3D Z-Depth Score from 2D Bounding Box
+# ==============================================================================
+fn compute_z_depth(args: PythonObject) raises -> PythonObject:
+    """Compute faux-3D Z-depth score from a bounding box.
+    
+    Z-Depth = normalized_area * foot_y_normalized³
+    
+    args: [x1, y1, x2, y2, frame_height]
+    Returns: Float64 score in [0, 1]. Higher = closer to camera.
+    """
+    var x1 = Float64(args[0])
+    var y1 = Float64(args[1])
+    var x2 = Float64(args[2])
+    var y2 = Float64(args[3])
+    var h = Float64(args[4])
+
+    var bw = x2 - x1
+    var bh = y2 - y1
+    # Normalize area by frame_height² for scale invariance
+    var area_norm = (bw * bh) / (h * h)
+    # foot_y = bottom of box = where feet touch floor, normalized [0,1]
+    var foot_y_norm = y2 / h
+    # Cubic exponent aggressively weights proximity:
+    # y=0.9 → 0.729, y=0.5 → 0.125 → 5.8x difference
+    return area_norm * foot_y_norm * foot_y_norm * foot_y_norm
+
+
+# ==============================================================================
 # PyInit — Expose all functions to Python via PythonModuleBuilder
 # ==============================================================================
 @export
@@ -440,8 +468,10 @@ fn PyInit_mojo_analytics() -> PythonObject:
         m.def_function[score_foreground_pair]("score_foreground_pair", docstring="Score foreground pair quality")
         m.def_function[detect_kinematic_events]("detect_kinematic_events", docstring="Detect takedown events")
         m.def_function[update_skeleton_ema]("update_skeleton_ema", docstring="EMA update for skeleton keypoints")
+        m.def_function[compute_z_depth]("compute_z_depth", docstring="Compute faux-3D Z-depth score")
         return m.finalize()
     except e:
         abort(String("error creating mojo_analytics Python module:", e))
         return PythonObject()
+
 
