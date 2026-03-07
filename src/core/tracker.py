@@ -107,6 +107,150 @@ def compute_z_depth_score(box, h):
     return area_norm * (foot_y_norm ** 3)
 
 
+def classify_ref_arm_signal(kpts):
+    """Classify referee arm signals from COCO pose keypoints.
+    
+    COCO keypoints used:
+      5,6 = left/right shoulder
+      7,8 = left/right elbow
+      9,10 = left/right wrist
+      0 = nose (head reference)
+    
+    Detects arm postures for Judo, BJJ, and Wrestling.
+    Returns: dict with 'signal' (str), 'confidence' (float), 'sport_signals' (dict)
+             or None if no clear signal detected.
+    
+    ARM ANGLE GEOMETRY:
+    - Angle measured between shoulder→wrist vector and horizontal
+    - >70° from horizontal = arm raised high (IPPON territory)
+    - 30-70° = arm at moderate angle (WAZA-ARI / ADVANTAGE territory) 
+    - <30° = arm roughly horizontal (OSAEKOMI / CAUTION territory)
+    - Both arms raised >70° simultaneously = strongest IPPON signal
+    """
+    if kpts is None or len(kpts) < 11:
+        return None
+    
+    # Extract keypoints with confidence threshold
+    CONF_MIN = 0.3
+    nose = kpts[0] if kpts[0][2] > CONF_MIN else None
+    l_shoulder = kpts[5] if kpts[5][2] > CONF_MIN else None
+    r_shoulder = kpts[6] if kpts[6][2] > CONF_MIN else None
+    l_elbow = kpts[7] if kpts[7][2] > CONF_MIN else None
+    r_elbow = kpts[8] if kpts[8][2] > CONF_MIN else None
+    l_wrist = kpts[9] if kpts[9][2] > CONF_MIN else None
+    r_wrist = kpts[10] if kpts[10][2] > CONF_MIN else None
+    
+    # Need at least one full arm chain
+    has_left = all(p is not None for p in [l_shoulder, l_elbow, l_wrist])
+    has_right = all(p is not None for p in [r_shoulder, r_elbow, r_wrist])
+    
+    if not has_left and not has_right:
+        return None
+    
+    def arm_angle_from_horizontal(shoulder, wrist):
+        """Angle of shoulder→wrist vector from horizontal. 0°=horizontal, 90°=vertical up."""
+        dx = wrist[0] - shoulder[0]
+        dy = shoulder[1] - wrist[1]  # Inverted Y (screen coords: y increases downward)
+        return math.degrees(math.atan2(dy, abs(dx) + 1e-5))
+    
+    def arm_extension_ratio(shoulder, elbow, wrist):
+        """How straight is the arm? 1.0 = perfectly straight, 0.0 = fully bent."""
+        full_len = math.hypot(wrist[0]-shoulder[0], wrist[1]-shoulder[1])
+        seg_len = (math.hypot(elbow[0]-shoulder[0], elbow[1]-shoulder[1]) + 
+                   math.hypot(wrist[0]-elbow[0], wrist[1]-elbow[1]))
+        return full_len / (seg_len + 1e-5)
+    
+    l_angle = arm_angle_from_horizontal(l_shoulder, l_wrist) if has_left else None
+    r_angle = arm_angle_from_horizontal(r_shoulder, r_wrist) if has_right else None
+    l_ext = arm_extension_ratio(l_shoulder, l_elbow, l_wrist) if has_left else None
+    r_ext = arm_extension_ratio(r_shoulder, r_elbow, r_wrist) if has_right else None
+    
+    # Check if wrists are above head (nose)
+    l_above_head = (l_wrist is not None and nose is not None and l_wrist[1] < nose[1] - 20)
+    r_above_head = (r_wrist is not None and nose is not None and r_wrist[1] < nose[1] - 20)
+    
+    # Check if arms are crossed (wrists cross over center)
+    arms_crossed = False
+    if l_wrist is not None and r_wrist is not None and l_shoulder is not None and r_shoulder is not None:
+        shoulder_mid_x = (l_shoulder[0] + r_shoulder[0]) / 2.0
+        l_side = l_wrist[0] - shoulder_mid_x
+        r_side = r_wrist[0] - shoulder_mid_x
+        arms_crossed = (l_side > 0 and r_side < 0)  # Left wrist on right side and vice versa
+
+    # Classify signals across sports
+    signal = None
+    confidence = 0.0
+    sport_signals = {}
+    
+    # ═══ BOTH ARMS RAISED HIGH (>70°) — strongest signal ═══
+    both_high = ((l_angle is not None and l_angle > 70) and 
+                 (r_angle is not None and r_angle > 70))
+    one_high = ((l_angle is not None and l_angle > 70) or 
+                (r_angle is not None and r_angle > 70))
+    one_above = l_above_head or r_above_head
+    both_above = l_above_head and r_above_head
+    
+    # Get the higher angle and its extension
+    max_angle = max(l_angle or -90, r_angle or -90)
+    max_ext = max(l_ext or 0, r_ext or 0)
+    
+    if both_high and both_above:
+        # IPPON (Judo) — both arms straight up above head
+        signal = "ARMS_UP"
+        confidence = min(0.95, 0.7 + max_ext * 0.25)
+        sport_signals = {
+            'judo': ('IPPON', confidence),
+            'bjj': ('SUBMISSION_SIGNAL', confidence * 0.6),
+            'wrestling': ('PIN_CALLED', confidence * 0.7),
+        }
+    elif one_high and one_above and max_ext > 0.75:
+        # One arm raised high — WAZA-ARI (Judo) or POINTS (BJJ/Wrestling)
+        signal = "ARM_RAISED"
+        confidence = min(0.85, 0.6 + max_ext * 0.2)
+        sport_signals = {
+            'judo': ('WAZA-ARI', confidence),
+            'bjj': ('POINTS', confidence * 0.8),
+            'wrestling': ('POINTS', confidence * 0.8),
+        }
+    elif max_angle > 30 and max_angle < 70 and max_ext > 0.6:
+        # Arm at moderate angle — ADVANTAGE/MATTE
+        signal = "ARM_ANGLED"
+        confidence = min(0.7, 0.4 + max_ext * 0.2)
+        sport_signals = {
+            'judo': ('MATTE', confidence * 0.7),
+            'bjj': ('ADVANTAGE', confidence * 0.8),
+            'wrestling': ('CAUTION', confidence * 0.6),
+        }
+    elif max_angle >= -10 and max_angle <= 30 and max_ext > 0.7:
+        # Arm roughly horizontal — OSAEKOMI/POINTS
+        signal = "ARM_HORIZONTAL"
+        confidence = min(0.65, 0.4 + max_ext * 0.15)
+        sport_signals = {
+            'judo': ('OSAEKOMI', confidence * 0.7),
+            'bjj': ('POINTS', confidence * 0.5),
+            'wrestling': ('CAUTION', confidence * 0.6),
+        }
+    elif arms_crossed:
+        # Arms crossed — SUBMISSION (BJJ) / MATTE (Judo)
+        signal = "ARMS_CROSSED"
+        confidence = 0.6
+        sport_signals = {
+            'judo': ('MATTE', confidence * 0.8),
+            'bjj': ('SUBMISSION', confidence * 0.7),
+            'wrestling': ('STOP', confidence * 0.5),
+        }
+    
+    if signal is None:
+        return None
+    
+    return {
+        'signal': signal,
+        'confidence': confidence,
+        'sport_signals': sport_signals,
+        'l_angle': l_angle,
+        'r_angle': r_angle,
+    }
+
 def bb_iou(boxA, boxB):
     xA, yA = max(boxA[0], boxB[0]), max(boxA[1], boxB[1])
     xB, yB = min(boxA[2], boxB[2]), min(boxA[3], boxB[3])
@@ -813,7 +957,20 @@ class MatchTracker:
             y_ema = 0.9 * y_ema + 0.1 * curr_y
             h_ema = 0.9 * h_ema + 0.1 * curr_h
 
-            res = {'p1': p1_det, 'p2': p2_det, 'melded': melded, 'bg': bg, 'ref': ref, 'spec': spec, 'unk': unk, 'z_horizon': y_ema}
+            res = {
+                'p1': p1_det, 'p2': p2_det, 'melded': melded,
+                'bg': bg, 'ref': ref, 'spec': spec, 'unk': unk,
+                'z_horizon': y_ema, 'ref_signal': None
+            }
+            # Classify ref arm signal if ref detected with keypoints
+            if ref:
+                for r in ref:
+                    r_kpt = r.get('kpt')
+                    if r_kpt is not None:
+                        sig = classify_ref_arm_signal(r_kpt)
+                        if sig and sig['confidence'] > 0.5:
+                            res['ref_signal'] = sig
+                            break
             return res, p1_prof, p2_prof, y_ema, h_ema
 
         import copy
@@ -826,7 +983,7 @@ class MatchTracker:
         action_y_ema = max(p1_profile['box'][3], p2_profile['box'][3])
         action_h_ema = max(p1_profile['box'][3]-p1_profile['box'][1], p2_profile['box'][3]-p2_profile['box'][1])
 
-        timeline[anchor['f']] = {'p1': p1_profile.copy(), 'p2': p2_profile.copy(), 'melded': False, 'bg': [], 'ref': [], 'spec': [], 'unk': [], 'z_horizon': action_y_ema}
+        timeline[anchor['f']] = {'p1': p1_profile.copy(), 'p2': p2_profile.copy(), 'melded': False, 'bg': [], 'ref': [], 'spec': [], 'unk': [], 'z_horizon': action_y_ema, 'ref_signal': None}
 
         p1_f, p2_f, y_f, h_f = copy.deepcopy(p1_profile), copy.deepcopy(p2_profile), action_y_ema, action_h_ema
         for f in range(anchor['f'] + 1, total_frames):

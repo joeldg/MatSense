@@ -29,19 +29,28 @@ PREDICT_CONF = 0.4
 
 # UI / Rendering Settings
 HUD_COLORS = {
+    # State indicators
     "STANDING": (100, 255, 100),       # Green
     "MATE": (0, 200, 255),             # Yellow
     "NE-WAZA": (255, 100, 100),        # Blue
     "KUZUSHI": (0, 0, 255),            # Red
+    # Text
     "TEXT": (255, 255, 255),           # White
     "TEXT_DIM": (150, 150, 150),       # Light Gray
-    "SKELETON_0": (0, 255, 100),
-    "SKELETON_1": (255, 50, 255),
-    "BG": (100, 100, 100),
-    "SPEC": (0, 100, 255),
-    "REF": (0, 215, 255),
-    "UNK": (200, 200, 200),
-    "PLUMB_LINE": (0, 255, 255)
+    # Entity colors — consistent identification
+    "ATHLETE_1": (255, 255, 255),      # White — Athlete 1
+    "ATHLETE_2": (255, 100, 0),        # Blue — Athlete 2
+    "SKELETON_0": (255, 255, 255),     # White skeleton for Athlete 1
+    "SKELETON_1": (255, 100, 0),       # Blue skeleton for Athlete 2
+    "REF": (0, 0, 255),               # Red — Referee (must exist)
+    "SPEC": (0, 165, 255),            # Orange — Spectators
+    "BG": (128, 128, 128),            # Grey — Background
+    "UNK": (200, 200, 200),           # Light grey — Unknown
+    # Overlays
+    "PERSPECTIVE": (0, 255, 0),        # Green — 3D depth grid lines
+    "PLUMB_LINE": (0, 255, 255),       # Yellow — vertical reference
+    "SIGNAL": (0, 255, 255),           # Yellow — ref arm signal text
+    "SIGNAL_FLASH": (0, 0, 255),       # Red — ref signal flash
 }
 
 DASHBOARD_WIDTH = 500

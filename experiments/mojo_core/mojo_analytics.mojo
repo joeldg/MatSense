@@ -456,6 +456,96 @@ fn compute_z_depth(args: PythonObject) raises -> PythonObject:
 
 
 # ==============================================================================
+# 8. CLASSIFY_REF_ARM_SIGNAL — Referee Arm Posture from COCO Keypoints
+# ==============================================================================
+fn classify_ref_arm_signal(args: PythonObject) raises -> PythonObject:
+    """Classify referee arm signal from flat keypoint array.
+    
+    args: flat list of 17*3 = 51 floats [x0,y0,c0, x1,y1,c1, ...]
+    Returns: [signal_code, confidence, l_angle, r_angle]
+       signal_code: 0=none, 1=arms_up, 2=arm_raised, 3=arm_angled, 4=arm_horizontal, 5=arms_crossed.
+    """
+    var py = Python.import_module("builtins")
+    var math_mod = Python.import_module("math")
+    
+    var n = Int(py.len(args))
+    if n < 33:  # Need at least keypoints 0-10 (11 * 3 = 33)
+        return py.list([0, 0.0, 0.0, 0.0])
+    
+    var CONF_MIN: Float64 = 0.3
+    
+    # Extract keypoints: nose(0), l_shoulder(5), r_shoulder(6), l_elbow(7), r_elbow(8), l_wrist(9), r_wrist(10)
+    var nose_x = Float64(args[0]); var nose_y = Float64(args[1]); var nose_c = Float64(args[2])
+    var ls_x = Float64(args[15]); var ls_y = Float64(args[16]); var ls_c = Float64(args[17])
+    var rs_x = Float64(args[18]); var rs_y = Float64(args[19]); var rs_c = Float64(args[20])
+    var le_x = Float64(args[21]); var le_y = Float64(args[22]); var le_c = Float64(args[23])
+    var re_x = Float64(args[24]); var re_y = Float64(args[25]); var re_c = Float64(args[26])
+    var lw_x = Float64(args[27]); var lw_y = Float64(args[28]); var lw_c = Float64(args[29])
+    var rw_x = Float64(args[30]); var rw_y = Float64(args[31]); var rw_c = Float64(args[32])
+    
+    var has_left = ls_c > CONF_MIN and le_c > CONF_MIN and lw_c > CONF_MIN
+    var has_right = rs_c > CONF_MIN and re_c > CONF_MIN and rw_c > CONF_MIN
+    
+    if not has_left and not has_right:
+        return py.list([0, 0.0, 0.0, 0.0])
+    
+    # Arm angle from horizontal (0=horizontal, 90=vertical up)
+    var l_angle: Float64 = -90.0
+    var r_angle: Float64 = -90.0
+    var l_ext: Float64 = 0.0
+    var r_ext: Float64 = 0.0
+    
+    if has_left:
+        var dx = lw_x - ls_x
+        var dy = ls_y - lw_y  # inverted Y
+        var abs_dx = dx if dx > 0 else -dx
+        l_angle = Float64(math_mod.degrees(math_mod.atan2(dy, abs_dx + 1e-5)))
+        var full_len = sqrt((lw_x-ls_x)*(lw_x-ls_x) + (lw_y-ls_y)*(lw_y-ls_y))
+        var seg_len = sqrt((le_x-ls_x)*(le_x-ls_x) + (le_y-ls_y)*(le_y-ls_y)) + sqrt((lw_x-le_x)*(lw_x-le_x) + (lw_y-le_y)*(lw_y-le_y))
+        l_ext = full_len / (seg_len + 1e-5)
+    
+    if has_right:
+        var dx = rw_x - rs_x
+        var dy = rs_y - rw_y
+        var abs_dx = dx if dx > 0 else -dx
+        r_angle = Float64(math_mod.degrees(math_mod.atan2(dy, abs_dx + 1e-5)))
+        var full_len = sqrt((rw_x-rs_x)*(rw_x-rs_x) + (rw_y-rs_y)*(rw_y-rs_y))
+        var seg_len = sqrt((re_x-rs_x)*(re_x-rs_x) + (re_y-rs_y)*(re_y-rs_y)) + sqrt((rw_x-re_x)*(rw_x-re_x) + (rw_y-re_y)*(rw_y-re_y))
+        r_ext = full_len / (seg_len + 1e-5)
+    
+    var l_above_head = has_left and nose_c > CONF_MIN and lw_y < nose_y - 20
+    var r_above_head = has_right and nose_c > CONF_MIN and rw_y < nose_y - 20
+    
+    var max_angle = l_angle if l_angle > r_angle else r_angle
+    var max_ext = l_ext if l_ext > r_ext else r_ext
+    
+    var signal_code: Int = 0
+    var confidence: Float64 = 0.0
+    
+    var both_high = l_angle > 70 and r_angle > 70
+    var one_high = l_angle > 70 or r_angle > 70
+    
+    if both_high and l_above_head and r_above_head:
+        signal_code = 1  # ARMS_UP
+        confidence = 0.7 + max_ext * 0.25
+        if confidence > 0.95: confidence = 0.95
+    elif one_high and (l_above_head or r_above_head) and max_ext > 0.75:
+        signal_code = 2  # ARM_RAISED
+        confidence = 0.6 + max_ext * 0.2
+        if confidence > 0.85: confidence = 0.85
+    elif max_angle > 30 and max_angle < 70 and max_ext > 0.6:
+        signal_code = 3  # ARM_ANGLED
+        confidence = 0.4 + max_ext * 0.2
+        if confidence > 0.7: confidence = 0.7
+    elif max_angle >= -10 and max_angle <= 30 and max_ext > 0.7:
+        signal_code = 4  # ARM_HORIZONTAL
+        confidence = 0.4 + max_ext * 0.15
+        if confidence > 0.65: confidence = 0.65
+    
+    return py.list([signal_code, confidence, l_angle, r_angle])
+
+
+# ==============================================================================
 # PyInit — Expose all functions to Python via PythonModuleBuilder
 # ==============================================================================
 @export
@@ -469,6 +559,7 @@ fn PyInit_mojo_analytics() -> PythonObject:
         m.def_function[detect_kinematic_events]("detect_kinematic_events", docstring="Detect takedown events")
         m.def_function[update_skeleton_ema]("update_skeleton_ema", docstring="EMA update for skeleton keypoints")
         m.def_function[compute_z_depth]("compute_z_depth", docstring="Compute faux-3D Z-depth score")
+        m.def_function[classify_ref_arm_signal]("classify_ref_arm_signal", docstring="Classify referee arm signal from keypoints")
         return m.finalize()
     except e:
         abort(String("error creating mojo_analytics Python module:", e))
