@@ -1,5 +1,6 @@
 import json
 import os
+import cv2
 from ultralytics import YOLO
 
 from settings import PROPRIETARY_MODEL
@@ -7,6 +8,7 @@ from src.core.tracker import MatchTracker
 from src.core.analyzer import MatchAnalyzer
 from src.core.renderer import BroadcastRenderer
 from src.core.harvester import DataHarvester
+from src.core.mat_homography import MatHomography
 
 class GrapplingPipeline:
     def __init__(self, model_path=PROPRIETARY_MODEL, use_mojo=False):
@@ -71,6 +73,33 @@ class GrapplingPipeline:
             
         print(f"\n🎉 MASTER PIPELINE COMPLETE: {len(all_events)} matches found! Output: {video_output_dir} 🎉")
 
+    def _compute_mat_homography(self, video_path, w, h):
+        """Compute mat homography from the first usable frame of the video.
+        
+        Reads 5 evenly-spaced frames and picks the one with the best
+        mat detection. This is computed once per segment.
+        """
+        mat_H = MatHomography()
+        cap = cv2.VideoCapture(video_path) if isinstance(video_path, str) else None
+        
+        if cap is None or not cap.isOpened():
+            return mat_H  # Unavailable
+        
+        total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        # Sample 5 evenly-spaced frames to find best mat detection
+        for sample_idx in range(5):
+            target_frame = int(total * (0.2 + sample_idx * 0.15))  # 20%, 35%, 50%, 65%, 80%
+            cap.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
+            ret, frame = cap.read()
+            if ret and mat_H.compute(frame, w, h):
+                print(f"   📐 MAT HOMOGRAPHY: Computed from frame {target_frame} — mat-space coordinates available")
+                cap.release()
+                return mat_H
+        
+        cap.release()
+        print("   ⚠️ MAT HOMOGRAPHY: Could not detect mat quad — using pixel-space only")
+        return mat_H
+
     def _analyze_single_window(self, raw_data, total_frames, fps, w, h, frame_offset):
         """Run the full analysis pipeline on a single window of raw_data. Returns [(event, timeline), ...].
         
@@ -81,18 +110,21 @@ class GrapplingPipeline:
         
         If any are missing, the segment is skipped (it's likely a transition/replay/leaderboard).
         """
-        anchor = self.tracker.find_foreground_anchor(raw_data, w, h, fps)
+        # Compute mat homography (optional augmentation)
+        mat_H = self._compute_mat_homography(self.tracker.last_video_path, w, h) if hasattr(self.tracker, 'last_video_path') else MatHomography()
+        
+        anchor = self.tracker.find_foreground_anchor(raw_data, w, h, fps, mat_H=mat_H)
         if not anchor:
             return []
             
-        true_coach_id, spec_ids, bg_ids = self.tracker.build_global_blacklist(raw_data, anchor, w, h, fps)
+        true_coach_id, spec_ids, bg_ids = self.tracker.build_global_blacklist(raw_data, anchor, w, h, fps, mat_H=mat_H)
         
         # TRIAD GATE: No ref found = not a valid match segment
         if true_coach_id is None:
             print("   ⛔ TRIAD GATE: No referee detected — skipping segment (not a valid match)")
             return []
         
-        resolved_timeline = self.tracker.resolve_timeline(raw_data, total_frames, anchor, true_coach_id, spec_ids, bg_ids, w, h)
+        resolved_timeline = self.tracker.resolve_timeline(raw_data, total_frames, anchor, true_coach_id, spec_ids, bg_ids, w, h, mat_H=mat_H)
         
         # ENGAGEMENT GATE: Verify athletes are actually engaged, not just standing idle
         # Count frames where both athletes are detected (not melded from missing data)

@@ -546,6 +546,67 @@ fn classify_ref_arm_signal(args: PythonObject) raises -> PythonObject:
 
 
 # ==============================================================================
+# 9. PIXEL_TO_MAT — Apply 3x3 Homography Transform
+# ==============================================================================
+fn pixel_to_mat(args: PythonObject) raises -> PythonObject:
+    """Transform pixel coords to mat-space via 3x3 homography.
+    
+    args: [px, py, h00, h01, h02, h10, h11, h12, h20, h21, h22]
+    Returns: [mat_x, mat_y]
+    """
+    var py = Python.import_module("builtins")
+    
+    var px = Float64(args[0])
+    var py_coord = Float64(args[1])
+    var h00 = Float64(args[2]); var h01 = Float64(args[3]); var h02 = Float64(args[4])
+    var h10 = Float64(args[5]); var h11 = Float64(args[6]); var h12 = Float64(args[7])
+    var h20 = Float64(args[8]); var h21 = Float64(args[9]); var h22 = Float64(args[10])
+    
+    var denom = h20 * px + h21 * py_coord + h22
+    if denom == 0.0:
+        denom = 1e-10
+    
+    var mat_x = (h00 * px + h01 * py_coord + h02) / denom
+    var mat_y = (h10 * px + h11 * py_coord + h12) / denom
+    
+    return py.list([mat_x, mat_y])
+
+
+# ==============================================================================
+# 10. IS_ON_MAT — Check if transformed point is within mat bounds
+# ==============================================================================
+fn is_on_mat(args: PythonObject) raises -> PythonObject:
+    """Check if pixel coords map to a point on the mat.
+    
+    args: [px, py, h00..h22, mat_w, mat_h, margin]
+    Returns: 1 if on mat, 0 if off mat
+    """
+    var py = Python.import_module("builtins")
+    
+    var px = Float64(args[0])
+    var py_coord = Float64(args[1])
+    var h00 = Float64(args[2]); var h01 = Float64(args[3]); var h02 = Float64(args[4])
+    var h10 = Float64(args[5]); var h11 = Float64(args[6]); var h12 = Float64(args[7])
+    var h20 = Float64(args[8]); var h21 = Float64(args[9]); var h22 = Float64(args[10])
+    var mat_w = Float64(args[11])
+    var mat_h = Float64(args[12])
+    var margin = Float64(args[13])
+    
+    var denom = h20 * px + h21 * py_coord + h22
+    if denom == 0.0:
+        denom = 1e-10
+    
+    var mat_x = (h00 * px + h01 * py_coord + h02) / denom
+    var mat_y = (h10 * px + h11 * py_coord + h12) / denom
+    
+    var on = mat_x >= -margin and mat_x <= mat_w + margin and mat_y >= -margin and mat_y <= mat_h + margin
+    
+    if on:
+        return py.list([1])
+    return py.list([0])
+
+
+# ==============================================================================
 # PyInit — Expose all functions to Python via PythonModuleBuilder
 # ==============================================================================
 @export
@@ -560,9 +621,12 @@ fn PyInit_mojo_analytics() -> PythonObject:
         m.def_function[update_skeleton_ema]("update_skeleton_ema", docstring="EMA update for skeleton keypoints")
         m.def_function[compute_z_depth]("compute_z_depth", docstring="Compute faux-3D Z-depth score")
         m.def_function[classify_ref_arm_signal]("classify_ref_arm_signal", docstring="Classify referee arm signal from keypoints")
+        m.def_function[pixel_to_mat]("pixel_to_mat", docstring="Transform pixel coords to mat-space via homography")
+        m.def_function[is_on_mat]("is_on_mat", docstring="Check if pixel coords are on the mat")
         return m.finalize()
     except e:
         abort(String("error creating mojo_analytics Python module:", e))
         return PythonObject()
+
 
 

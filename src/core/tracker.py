@@ -299,6 +299,7 @@ class MatchTracker:
                 self.use_mojo = False
 
     def extract_raw_data(self, video_path):
+        self.last_video_path = video_path  # Store for homography computation
         cap = cv2.VideoCapture(video_path)
         fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
         w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -389,7 +390,7 @@ class MatchTracker:
         return raw_data, total_frames, fps, w, h
 
 
-    def find_foreground_anchor(self, raw_data, w, h, fps):
+    def find_foreground_anchor(self, raw_data, w, h, fps, mat_H=None):
         """PHASE 2a: Find the two foreground athletes using Z-depth scoring and the Opening Bell Signature.
         
         THE OPENING BELL SIGNATURE:
@@ -466,6 +467,14 @@ class MatchTracker:
                         score = (depth_score * 150.0) + (size_h ** 2) * 15.0 + (center * 75.0) + ref_penalty + lr_bonus
                         if overlap_x * overlap_y > 0:
                             score += 15.0
+                        
+                        # MAT-SPACE BONUS: If both candidates' feet are on the mat, boost score
+                        # Athletes are ON the mat; spectators/coaches are off-mat
+                        if mat_H is not None and mat_H.available:
+                            foot1_on = mat_H.is_on_mat((b1[0]+b1[2])/2, b1[3])
+                            foot2_on = mat_H.is_on_mat((b2[0]+b2[2])/2, b2[3])
+                            if foot1_on and foot2_on:
+                                score += 50.0  # Both on mat = strong match candidate
                     
                     if should_skip:
                         continue
@@ -594,7 +603,7 @@ class MatchTracker:
                         
         return best_anchor
 
-    def build_global_blacklist(self, raw_data, anchor, w, h, fps):
+    def build_global_blacklist(self, raw_data, anchor, w, h, fps, mat_H=None):
         """SENTINEL REF CLASSIFIER: Behavioral profiling to classify and blacklist referees.
         
         Uses 5 independent signals to identify the referee:
@@ -700,6 +709,26 @@ class MatchTracker:
             if med_y < anchor_y - (anchor_h * 0.45):
                 bg_ids.add(tid); continue
             
+            # MAT-SPACE FILTER: If homography available, entities consistently
+            # off-mat (>70% of frames) are spectators/coaches, not athletes or refs
+            on_mat_pct = None
+            mat_edge_avg = None
+            if mat_H is not None and mat_H.available and len(stats['boxes']) > 3:
+                on_mat_pct = mat_H.on_mat_percentage(stats['boxes'], h)
+                if on_mat_pct is not None and on_mat_pct < 0.25:
+                    # Off-mat >75% of the time → spectator
+                    spec_ids.add(tid)
+                    continue
+                # Compute average distance to mat edge (for ref detection)
+                edge_dists = []
+                for box in stats['boxes'][-20:]:  # Last 20 samples
+                    foot_x = (box[0] + box[2]) / 2.0
+                    ed = mat_H.mat_edge_distance(foot_x, box[3])
+                    if ed is not None:
+                        edge_dists.append(ed)
+                if edge_dists:
+                    mat_edge_avg = np.median(edge_dists)
+            
             # ── NEW SIGNAL 1: HEAD-ALTITUDE STABILITY ──
             # Refs maintain a steady head height. Athletes drop 200-400px during takedowns.
             # σ < 30px at 1080p ≈ 2.8% of frame height = normal head-bob
@@ -734,14 +763,29 @@ class MatchTracker:
             # refs into the spectator bucket. Refs interact less than 60% of the time.
             is_non_interactive = interaction_rate < 0.60
             
-            # Combined ref scoring: all 5 signals
+            # Combined ref scoring: all 5+2 signals
+            # MAT-SPACE SIGNAL: Refs stay near mat edge (2-4m from center)
+            mat_edge_score = 0.0
+            if mat_edge_avg is not None:
+                # Refs tend to be near the edge (0.5-2.5m from edge)
+                if 0.3 < mat_edge_avg < 3.0:
+                    mat_edge_score = 12.0
+            
+            # MAT-SPACE SIGNAL: Refs are on-mat but not as consistently as athletes
+            on_mat_score = 0.0
+            if on_mat_pct is not None:
+                if 0.40 < on_mat_pct < 0.90:  # Refs walk on/off
+                    on_mat_score = 8.0
+            
             if is_upright and is_non_interactive:
                 ref_score = (
                     (between_ratio * 30.0) +   # Legacy: starts between players
                     (avg_bw * 30.0) +           # Legacy: dark clothing
                     head_stability_score +       # NEW: steady head altitude
                     orbit_score +                # NEW: stable orbit around action
-                    max_ar_score                 # NEW: never goes horizontal
+                    max_ar_score +               # NEW: never goes horizontal
+                    mat_edge_score +             # NEW: near mat edge (homography)
+                    on_mat_score                 # NEW: on-mat but not always (homography)
                 )
                 ref_candidates.append({
                     'id': tid, 'score': ref_score, 'bw': avg_bw, 
@@ -790,7 +834,7 @@ class MatchTracker:
                 
         return true_coach_id, spec_ids, bg_ids
 
-    def resolve_timeline(self, raw_data, total_frames, anchor, true_coach_id, spec_ids, bg_ids, w, h):
+    def resolve_timeline(self, raw_data, total_frames, anchor, true_coach_id, spec_ids, bg_ids, w, h, mat_H=None):
         print("\n🧠 [PHASE 2c] SCIPY TRACKING: Enforcing Immutable DNA & Anti-Swap Physics...")
         timeline = {}
         
@@ -858,6 +902,13 @@ class MatchTracker:
                         if dist > w * 0.30: cost += 5000.0
                         elif dist > w * 0.25: cost += 2000.0 
                         cost += (dist / w) * 200.0
+                        
+                        # MAT-SPACE ANTI-TELEPORT: If real distance > 3m in one frame → penalty
+                        # At 30fps, max human sprint ~10m/s = 0.33m/frame. 3m = 9 frames of running.
+                        if mat_H is not None and mat_H.available:
+                            mat_dist = mat_H.mat_distance(tcx, target['box'][3], ccx, cand['box'][3])
+                            if mat_dist is not None and mat_dist > 3.0:
+                                cost += 3000.0  # Additive to pixel check
                         
                         # CROSS-ASSIGNMENT PENALTY: if candidate is closer to the OTHER
                         # profile than to this target, penalize to prevent swaps
