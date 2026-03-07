@@ -84,13 +84,13 @@ class TestKuzushi:
 
     def test_python_kuzushi_runs(self):
         kpts = self._make_mock_kpts()
-        com, cp, dist, is_k = py_kuzushi(kpts)
+        com, cp, dist, is_k, direction = py_kuzushi(kpts)
         assert com is not None, "Python kuzushi returned None com"
         assert dist >= 0.0
 
     def test_mojo_matches_python(self, mojo):
         kpts = self._make_mock_kpts(seed=123)
-        py_com, py_cp, py_dist, py_is_k = py_kuzushi(kpts)
+        py_com, py_cp, py_dist, py_is_k, _ = py_kuzushi(kpts)
         mojo_com, mojo_cp, mojo_dist, mojo_is_k = mojo.calculate_fast_kuzushi(kpts)
 
         np.testing.assert_allclose(py_com, mojo_com, atol=1e-6,
@@ -106,7 +106,7 @@ class TestKuzushi:
         """Run parity check across many random inputs."""
         for seed in range(10):
             kpts = self._make_mock_kpts(seed=seed)
-            py_com, py_cp, py_dist, py_is_k = py_kuzushi(kpts)
+            py_com, py_cp, py_dist, py_is_k, _ = py_kuzushi(kpts)
             mojo_com, mojo_cp, mojo_dist, mojo_is_k = mojo.calculate_fast_kuzushi(kpts)
             assert abs(py_dist - mojo_dist) < 1e-6, f"Seed {seed}: distance mismatch"
 

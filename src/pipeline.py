@@ -60,10 +60,16 @@ class GrapplingPipeline:
             
             master_report["highlights"].append({
                 "match_number": match_num,
+                "event_type": event.get('type', 'TAKEDOWN'),
+                "confidence": event.get('confidence', 0.0),
                 "filename": event_stats["filename"],
                 "slow_mo_filename": event_stats["slow_mo_file"],
                 "tensor_filename": tensor_path,
                 "phases_detected": event_stats["phases"],
+                "kuzushi": event.get('kuzushi'),
+                "descent": event.get('descent'),
+                "ref_signal": event.get('ref_signal'),
+                "phase_timeline": event.get('phase_timeline'),
                 "match_timestamp_sec": round(float(event['start_frame'] / fps), 1)
             })
             

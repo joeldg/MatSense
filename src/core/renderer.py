@@ -294,6 +294,12 @@ class BroadcastRenderer:
             canvas[:, :self.w] = frame.copy(); canvas[:, self.w:] = (25, 25, 25) 
             new_state = "STANDING (TACHI-WAZA)"
             
+            # Determine match phase from event metadata
+            event_type = event.get('type', 'TAKEDOWN')
+            event_confidence = event.get('confidence', 0.0)
+            kuzushi_info = event.get('kuzushi', {})
+            descent_info = event.get('descent', {})
+            
             b1, k1 = data['p1']['box'], data['p1'].get('kpt')
             b2, k2 = data['p2']['box'], data['p2'].get('kpt')
             z_horizon = data.get('z_horizon', self.h*0.8)
@@ -382,6 +388,27 @@ class BroadcastRenderer:
             cv2.putText(canvas, "CURRENT PHASE:", (dash_x, int(170 * self.scale)), cv2.FONT_HERSHEY_SIMPLEX, 0.6 * self.scale, HUD_COLORS["TEXT"], self.th_thin)
             cv2.rectangle(canvas, (dash_x, int(190 * self.scale)), (dash_x + int(350 * self.scale), int(240 * self.scale)), hud_color, self.th_thick)
             cv2.putText(canvas, new_state, (dash_x + int(10 * self.scale), int(225 * self.scale)), cv2.FONT_HERSHEY_SIMPLEX, 0.6 * self.scale, hud_color, self.th_thick)
+            
+            # ── EVENT TYPE DISPLAY ──
+            ev_y = int(260 * self.scale)
+            event_colors = {
+                'THROW': (0, 200, 255),       # Orange-yellow
+                'TAKEDOWN': (0, 255, 100),     # Green
+                'GUARD_PULL': (255, 180, 0),   # Cyan-ish
+                'SWEEP': (200, 100, 255),      # Purple
+            }
+            ev_color = event_colors.get(event_type, HUD_COLORS["TEXT"])
+            cv2.putText(canvas, "EVENT:", (dash_x, ev_y), cv2.FONT_HERSHEY_SIMPLEX, 0.55 * self.scale, HUD_COLORS["TEXT"], self.th_thin)
+            cv2.putText(canvas, f"{event_type} ({event_confidence:.0%})", (dash_x + int(70 * self.scale), ev_y), cv2.FONT_HERSHEY_SIMPLEX, 0.6 * self.scale, ev_color, self.th_thick)
+            
+            # Kuzushi info
+            if kuzushi_info.get('direction'):
+                kuz_y = ev_y + int(25 * self.scale)
+                kuz_text = f"KUZUSHI: {kuzushi_info['direction']} ({kuzushi_info.get('severity_px', 0):.0f}px)"
+                cv2.putText(canvas, kuz_text, (dash_x, kuz_y), cv2.FONT_HERSHEY_SIMPLEX, 0.45 * self.scale, (0, 255, 255), self.th_thin)
+                if kuzushi_info.get('mechanism'):
+                    mech_y = kuz_y + int(20 * self.scale)
+                    cv2.putText(canvas, f"MECH: {kuzushi_info['mechanism']}", (dash_x, mech_y), cv2.FONT_HERSHEY_SIMPLEX, 0.45 * self.scale, (0, 255, 255), self.th_thin)
 
             # ── REF ARM SIGNAL DISPLAY ──
             if ref_signal and ref_signal.get('signal'):
