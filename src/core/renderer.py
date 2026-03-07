@@ -64,76 +64,175 @@ class BroadcastRenderer:
         self.r_large = max(3, int(6 * self.scale))
 
     def compute_perspective_lines(self, frame):
-        """Detect vanishing-point perspective lines from mat/ceiling edges.
+        """Detect actual mat boundary lines for perspective visualization.
         
-        Uses Canny + HoughLinesP to find dominant straight lines, then
-        groups them by angle to identify convergence toward a vanishing point.
-        Falls back to a static trapezoidal grid if detection fails.
+        Strategy:
+        1. Focus on the mat region (lower 70% of frame, where the mat is)
+        2. Use bilateral filtering to preserve strong edges (mat lines) while
+           reducing texture noise (gi fabric, skin)
+        3. Run Canny + HoughLinesP to find dominant straight lines
+        4. Group lines by angle into 2 clusters (longitudinal + lateral mat edges)
+        5. Keep strongest lines from each cluster for clean perspective
+        6. Extend detected lines to frame edges
         """
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        edges = cv2.Canny(gray, 50, 150, apertureSize=3)
-        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=100,
-                                minLineLength=int(self.w * 0.15),
-                                maxLineGap=int(self.w * 0.05))
+        h, w = frame.shape[:2]
         
-        perspective = []
-        if lines is not None and len(lines) > 5:
-            # Group lines by angle
-            angles = []
-            for line in lines:
-                x1, y1, x2, y2 = line[0]
-                angle = math.degrees(math.atan2(y2 - y1, x2 - x1))
-                length = math.hypot(x2 - x1, y2 - y1)
-                # Keep lines that aren't purely horizontal or vertical
-                if 5 < abs(angle) < 85 and length > self.w * 0.1:
-                    perspective.append((x1, y1, x2, y2, angle, length))
+        # Focus on mat region — the mat is typically in the lower 70% of the frame
+        # The top 30% is usually crowd/ceiling/scoreboard
+        mat_top = int(h * 0.30)
+        mat_region = frame[mat_top:, :]
+        
+        # Bilateral filter: preserves strong edges (mat lines) while smoothing texture
+        filtered = cv2.bilateralFilter(mat_region, 9, 75, 75)
+        gray = cv2.cvtColor(filtered, cv2.COLOR_BGR2GRAY)
+        
+        # Adaptive Canny thresholds based on image contrast
+        median_val = np.median(gray)
+        low_thresh = int(max(30, 0.5 * median_val))
+        high_thresh = int(min(250, 1.5 * median_val))
+        edges = cv2.Canny(gray, low_thresh, high_thresh, apertureSize=3)
+        
+        # HoughLinesP — tuned for mat lines:
+        # - minLineLength: 20% of frame width (mat lines are long)
+        # - maxLineGap: 5% (lines can be interrupted by athletes/objects)
+        # - threshold: 80 votes (less strict to catch mat lines)
+        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=80,
+                                minLineLength=int(w * 0.12),
+                                maxLineGap=int(w * 0.06))
+        
+        if lines is None or len(lines) < 2:
+            return []  # No lines found — draw nothing rather than fake lines
+        
+        # Collect all candidate lines with metadata
+        candidates = []
+        for line in lines:
+            x1, y1_local, x2, y2_local = line[0]
+            # Convert back to full-frame coordinates
+            y1 = y1_local + mat_top
+            y2 = y2_local + mat_top
             
-            # Sort by length, keep top 6 strongest lines
-            perspective.sort(key=lambda x: x[5], reverse=True)
-            perspective = perspective[:6]
-        
-        if len(perspective) < 3:
-            # Fallback: static trapezoidal grid showing depth
-            # Wider at bottom (camera), narrower at top (far)
-            w, h = self.w, self.h
-            cx = w // 2
-            # Bottom corners (wide, near camera)
-            bl_x, br_x = int(w * 0.05), int(w * 0.95)
-            # Top corners (narrow, distant)
-            tl_x, tr_x = int(w * 0.30), int(w * 0.70)
-            top_y = int(h * 0.25)
-            bot_y = int(h * 0.90)
+            angle = math.degrees(math.atan2(y2 - y1, x2 - x1))
+            length = math.hypot(x2 - x1, y2 - y1)
             
-            perspective = [
-                (bl_x, bot_y, tl_x, top_y, 0, 0),  # Left edge
-                (br_x, bot_y, tr_x, top_y, 0, 0),  # Right edge
-                (cx - int(w*0.15), bot_y, cx - int(w*0.05), top_y, 0, 0),  # Left-center  
-                (cx + int(w*0.15), bot_y, cx + int(w*0.05), top_y, 0, 0),  # Right-center
-            ]
-            # Horizontal depth markers
-            for frac in [0.45, 0.60, 0.75]:
-                y = int(h * frac)
-                # Interpolate width at this height
-                t = (bot_y - y) / (bot_y - top_y + 1e-5)
-                lx = int(bl_x + t * (tl_x - bl_x))
-                rx = int(br_x + t * (tr_x - br_x))
-                perspective.append((lx, y, rx, y, 0, 0))
+            # Skip very short lines and nearly vertical lines (usually people standing)
+            if length < w * 0.08:
+                continue
+            if abs(angle) > 85 or abs(angle) < 2:
+                continue  # Skip purely horizontal and purely vertical
+                
+            candidates.append({
+                'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2,
+                'angle': angle, 'length': length
+            })
         
-        return perspective
+        if len(candidates) < 2:
+            return []
+        
+        # Group lines into angle clusters using simple binning
+        # Mat lines typically form two families: ~parallel to each other
+        # One family for longitudinal edges, one for lateral edges
+        angles = [c['angle'] for c in candidates]
+        
+        # Sort candidates by angle for cluster detection
+        candidates.sort(key=lambda c: c['angle'])
+        
+        # Find the two dominant angle clusters
+        cluster_a = []  # First angle family
+        cluster_b = []  # Second angle family
+        
+        # Simple approach: partition into positive and negative angles
+        # (mat lines going left-to-right vs right-to-left)
+        for c in candidates:
+            if c['angle'] >= 0:
+                cluster_a.append(c)
+            else:
+                cluster_b.append(c)
+        
+        # If one cluster is empty, try splitting the larger one at the median
+        if len(cluster_a) < 2 and len(cluster_b) >= 4:
+            mid = len(cluster_b) // 2
+            cluster_a = cluster_b[mid:]
+            cluster_b = cluster_b[:mid]
+        elif len(cluster_b) < 2 and len(cluster_a) >= 4:
+            mid = len(cluster_a) // 2
+            cluster_b = cluster_a[mid:]
+            cluster_a = cluster_a[:mid]
+        
+        def extend_line_to_edges(x1, y1, x2, y2, w, h):
+            """Extend a line segment to reach the frame edges."""
+            dx = x2 - x1
+            dy = y2 - y1
+            if abs(dx) < 1:
+                return (x1, 0, x1, h)  # Vertical line
+            slope = dy / dx
+            intercept = y1 - slope * x1
+            # Find intersections with frame edges
+            y_at_x0 = intercept
+            y_at_xw = slope * w + intercept
+            x_at_y0 = -intercept / slope if abs(slope) > 0.01 else x1
+            x_at_yh = (h - intercept) / slope if abs(slope) > 0.01 else x1
+            
+            # Pick two intersection points that are within frame bounds
+            pts = []
+            if 0 <= y_at_x0 <= h: pts.append((0, int(y_at_x0)))
+            if 0 <= y_at_xw <= h: pts.append((w, int(y_at_xw)))
+            if 0 <= x_at_y0 <= w: pts.append((int(x_at_y0), 0))
+            if 0 <= x_at_yh <= w: pts.append((int(x_at_yh), h))
+            
+            if len(pts) >= 2:
+                return (pts[0][0], pts[0][1], pts[1][0], pts[1][1])
+            return (x1, y1, x2, y2)  # Couldn't extend
+        
+        # Take top lines from each cluster (by length), extend them
+        result = []
+        for cluster in [cluster_a, cluster_b]:
+            cluster.sort(key=lambda c: c['length'], reverse=True)
+            for c in cluster[:3]:  # Top 3 from each angle family
+                ext = extend_line_to_edges(c['x1'], c['y1'], c['x2'], c['y2'], w, h)
+                result.append(ext)
+        
+        return result
 
     def draw_perspective_grid(self, canvas):
-        """Draw green perspective lines showing 3D depth on the mat."""
+        """Draw green perspective lines along detected mat boundaries."""
         if self.perspective_lines is None:
             self.perspective_lines = self.compute_perspective_lines(canvas[:, :self.w])
+        
+        if not self.perspective_lines:
+            return  # No lines detected — don't draw fake ones
         
         overlay = canvas[:, :self.w].copy()
         color = HUD_COLORS["PERSPECTIVE"]
         for line_data in self.perspective_lines:
             x1, y1, x2, y2 = line_data[0], line_data[1], line_data[2], line_data[3]
-            cv2.line(overlay, (x1, y1), (x2, y2), color, self.th_thick)
+            # Draw dashed lines for subtlety
+            self._draw_dashed_line(overlay, (x1, y1), (x2, y2), color, self.th_thin, dash_len=15, gap_len=10)
         
-        # Blend at 30% opacity so lines don't overwhelm the video
-        cv2.addWeighted(overlay, 0.3, canvas[:, :self.w], 0.7, 0, canvas[:, :self.w])
+        # Blend at 25% opacity — subtle depth cue, not distracting
+        cv2.addWeighted(overlay, 0.25, canvas[:, :self.w], 0.75, 0, canvas[:, :self.w])
+    
+    def _draw_dashed_line(self, img, pt1, pt2, color, thickness, dash_len=15, gap_len=10):
+        """Draw a dashed line between two points."""
+        x1, y1 = pt1
+        x2, y2 = pt2
+        dist = math.hypot(x2 - x1, y2 - y1)
+        if dist < 1:
+            return
+        dx = (x2 - x1) / dist
+        dy = (y2 - y1) / dist
+        pos = 0
+        drawing = True
+        while pos < dist:
+            seg_len = dash_len if drawing else gap_len
+            end_pos = min(pos + seg_len, dist)
+            if drawing:
+                sx = int(x1 + dx * pos)
+                sy = int(y1 + dy * pos)
+                ex = int(x1 + dx * end_pos)
+                ey = int(y1 + dy * end_pos)
+                cv2.line(img, (sx, sy), (ex, ey), color, thickness)
+            pos = end_pos
+            drawing = not drawing
 
     def draw_custom_skeleton(self, canvas, kpts, color):
         if kpts is None: return 
